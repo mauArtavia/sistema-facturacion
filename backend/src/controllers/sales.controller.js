@@ -1,6 +1,8 @@
 let sales = [];
 
 const createSale = (req, res) => {
+  console.log("🔥 BODY:", req.body);
+
   const { amount, method } = req.body;
 
   if (!amount || !method) {
@@ -10,13 +12,15 @@ const createSale = (req, res) => {
   }
 
   const newSale = {
-    id: sales.length + 1,
+    id: Date.now(),
     amount,
     method,
     createdAt: new Date()
   };
 
   sales.push(newSale);
+
+  console.log("✅ SALE CREATED");
 
   res.status(201).json(newSale);
 };
@@ -25,7 +29,8 @@ const getSales = (req, res) => {
   res.json(sales);
 };
 
+// 👇 EXPORTACIÓN CLARA (CLAVE)
 module.exports = {
-  createSale,
-  getSales
+  createSale: createSale,
+  getSales: getSales
 };

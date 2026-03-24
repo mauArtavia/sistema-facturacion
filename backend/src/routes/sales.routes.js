@@ -1,12 +1,11 @@
-const express = require('express');
+const express = require("express");
 const router = express.Router();
 
-const {
-  createSale,
-  getSales
-} = require('../controllers/sales.controller');
+// 👇 Import completo (más seguro)
+const controller = require("../controllers/sales.controller");
 
-router.post('/', createSale);
-router.get('/', getSales);
+// 👇 Usar funciones desde el objeto
+router.post("/", controller.createSale);
+router.get("/", controller.getSales);
 
-MediaSourceHandle.exports = router;
+module.exports = router;
