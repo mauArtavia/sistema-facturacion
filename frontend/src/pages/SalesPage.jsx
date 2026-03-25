@@ -2,19 +2,34 @@
  * ============================================
  * Sales Management System - Frontend Module
  * ============================================
- * Author: mArtavia.dev \ Mauricio Artavia Monge
+ * Author: mArtavia.dev | Mauricio Artavia Monge
  * Year: 2026
  *
  * Description:
- * This component handles sales registration, daily filtering, summary
- * calculations, and visualization through charts.
+ * This component provides a complete sales management interface.
+ * It allows users to:
+ * - Register new sales
+ * - Filter sales by date
+ * - Visualize data using charts
+ * - View summarized financial data
+ * - Inspect detailed sales history
  *
  * Technologies:
- * - React (Hooks)
- * - Recharts (Data Visualization)
- * - Custom API Service
+ * - React (Hooks: useState, useEffect, useMemo)
+ * - Recharts (Data visualization)
+ * - Custom API service (Axios-based)
  *
- * © 2026 mArtavia.dev - All rights reserved.
+ * Architecture Notes:
+ * - State is managed locally for simplicity
+ * - Derived data is memoized for performance
+ * - No global state (Redux/Zustand) is used at this stage
+ *
+ * Limitations:
+ * - No authentication layer
+ * - No pagination on history
+ * - Data depends on backend availability
+ *
+ * © 2026 mArtavia.dev — All rights reserved.
  * ============================================
  */
 
@@ -32,13 +47,19 @@ import {
 
 function SalesPage() {
   /**
-   * ========================
+   * ============================================
    * STATE MANAGEMENT
-   * ========================
+   * ============================================
    */
+
+  // Form inputs
   const [amount, setAmount] = useState("");
   const [method, setMethod] = useState("cash");
+
+  // Data state
   const [sales, setSales] = useState([]);
+
+  // UI state
   const [loading, setLoading] = useState(false);
 
   // Selected date (default: today)
@@ -47,7 +68,7 @@ function SalesPage() {
   );
 
   /**
-   * Payment method labels
+   * Payment method labels (UI representation)
    */
   const methodLabels = {
     cash: "Efectivo",
@@ -56,9 +77,9 @@ function SalesPage() {
   };
 
   /**
-   * ========================
+   * ============================================
    * FORMATTERS
-   * ========================
+   * ============================================
    */
 
   // Costa Rican currency formatter (CRC)
@@ -69,7 +90,7 @@ function SalesPage() {
       minimumFractionDigits: 0
     }).format(amount);
 
-  // Readable date
+  // Human-readable date formatter
   const formatDate = (date) =>
     new Intl.DateTimeFormat("es-CR", {
       day: "2-digit",
@@ -77,7 +98,7 @@ function SalesPage() {
       year: "numeric"
     }).format(new Date(date));
 
-  // Readable time
+  // Human-readable time formatter
   const formatTime = (date) =>
     new Intl.DateTimeFormat("es-CR", {
       hour: "2-digit",
@@ -85,22 +106,28 @@ function SalesPage() {
     }).format(new Date(date));
 
   /**
-   * ========================
-   * DATA PROCESSING
-   * ========================
+   * ============================================
+   * DATA PROCESSING (MEMOIZED)
+   * ============================================
    */
 
-  // Filter sales by selected date
+  /**
+   * Filter sales by selected date
+   * Memoized to avoid unnecessary recalculations
+   */
   const filteredSales = useMemo(() => {
     return sales.filter((sale) => {
       const saleDate = new Date(sale.createdAt)
         .toISOString()
         .split("T")[0];
+
       return saleDate === selectedDate;
     });
   }, [sales, selectedDate]);
 
-  // Calculate totals efficiently
+  /**
+   * Calculate totals efficiently in a single pass
+   */
   const { total, totalCash, totalCard, totalSimpe } = useMemo(() => {
     let total = 0;
     let totalCash = 0;
@@ -117,23 +144,30 @@ function SalesPage() {
 
     return { total, totalCash, totalCard, totalSimpe };
   }, [filteredSales]);
-  
-  // Chart data structure
+
+  /**
+   * Chart data structure for Recharts
+   */
   const chartData = [
     { name: "Efectivo", value: totalCash },
     { name: "Tarjeta", value: totalCard },
     { name: "SINPE", value: totalSimpe }
   ];
 
+  /**
+   * Color palette for chart segments
+   */
   const COLORS = ["#3D848F", "#314245", "#B6B5B8"];
 
   /**
-   * ========================
-   * API CALLS
-   * ========================
+   * ============================================
+   * API INTEGRATION
+   * ============================================
    */
 
-  // Fetch sales on component mount
+  /**
+   * Fetch sales on component mount
+   */
   useEffect(() => {
     const fetchSales = async () => {
       try {
@@ -143,21 +177,25 @@ function SalesPage() {
         console.error("Error fetching sales:", error);
       }
     };
+
     fetchSales();
   }, []);
 
-  // Register new sale
+  /**
+   * Handle new sale registration
+   */
   const handleRegister = async () => {
     if (!amount) return alert("Ingrese un monto");
 
     setLoading(true);
+
     try {
       const res = await API.post("/sales", {
         amount: Number(amount),
         method
       });
 
-      // Append new sale without refetching
+      // Optimistic UI update (no refetch needed)
       setSales((prev) => [...prev, res.data]);
       setAmount("");
     } catch (error) {
@@ -168,11 +206,11 @@ function SalesPage() {
   };
 
   /**
-   * ========================
+   * ============================================
    * UI RENDER
-   * ========================
+   * ============================================
    */
-  
+
   return (
     <div style={styles.container}>
       <h1 style={styles.title}>💰 Sistema de Ventas</h1>
@@ -181,7 +219,8 @@ function SalesPage() {
         
         {/* LEFT PANEL */}
         <div>
-          {/* Sales input */}
+
+          {/* Sales Input */}
           <div style={styles.card}>
             <input
               type="number"
@@ -210,7 +249,7 @@ function SalesPage() {
             </button>
           </div>
 
-          {/* Date filter */}
+          {/* Date Filter */}
           <div style={styles.card}>
             <h2>📅 Fecha</h2>
             <input
@@ -221,7 +260,7 @@ function SalesPage() {
             />
           </div>
 
-          {/* Chart */}
+          {/* Chart Visualization */}
           <div style={styles.card}>
             <h2 style={{ textAlign: "center" }}>📈 Métodos de pago</h2>
 
@@ -249,7 +288,8 @@ function SalesPage() {
 
         {/* RIGHT PANEL */}
         <div>
-          {/* Summary */}
+
+          {/* Summary Section */}
           <div style={styles.card}>
             <h2>📊 Resumen</h2>
             <p><b>Total:</b> {formatCRC(total)}</p>
@@ -258,7 +298,7 @@ function SalesPage() {
             <p><b>SINPE:</b> {formatCRC(totalSimpe)}</p>
           </div>
 
-          {/* Sales history */}
+          {/* Sales History */}
           <div style={{ ...styles.card, ...styles.cardScrollable }}>
             <h2>📋 Historial</h2>
 
@@ -288,7 +328,7 @@ function SalesPage() {
 
       </div>
 
-      {/* Footer / Copyright */}
+      {/* Footer */}
       <div style={styles.footer}>
         © 2026 mArtavia.dev — All rights reserved.
       </div>
@@ -297,9 +337,9 @@ function SalesPage() {
 }
 
 /**
- * ========================
- * STYLES
- * ========================
+ * ============================================
+ * STYLES (INLINE CSS OBJECTS)
+ * ============================================
  */
 
 const baseField = {
