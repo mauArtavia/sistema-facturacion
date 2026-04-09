@@ -6,8 +6,8 @@
  * Year: 2026
  *
  * Description:
- * Defines all HTTP routes related to sales and connects them to the
- * corresponding controller functions.
+ * Defines all HTTP routes related to sales and products,
+ * connecting them to the corresponding controller functions.
  *
  * Architecture Flow:
  * Client Request → Route → Controller → Response
@@ -36,23 +36,45 @@ const salesController = require("../controllers/sales.controller");
 
 /**
  * ============================================
- * ROUTES DEFINITION
+ * SALES ROUTES
  * ============================================
  */
 
 /**
+ * @route   GET /sales
+ * @desc    Retrieve all sales
+ * @access  Public
+ */
+router.get("/", salesController.getSales);
+
+/**
  * @route   POST /sales
  * @desc    Create a new sale
- * @access  Public (for now)
+ * @access  Public
+ * @body    { amount: number, method: string, productId?: number }
  */
 router.post("/", salesController.createSale);
 
 /**
- * @route   GET /sales
- * @desc    Retrieve all sales
- * @access  Public (for now)
+ * ============================================
+ * PRODUCT ROUTES
+ * ============================================
  */
-router.get("/", salesController.getSales);
+
+/**
+ * @route   GET /sales/products
+ * @desc    List all products
+ * @access  Public
+ */
+router.get("/products", salesController.getProducts);
+
+/**
+ * @route   POST /sales/products
+ * @desc    Create a new product
+ * @access  Public
+ * @body    { name: string, price: number }
+ */
+router.post("/products", salesController.createProduct);
 
 /**
  * ============================================

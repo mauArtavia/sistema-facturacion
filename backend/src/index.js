@@ -1,40 +1,9 @@
-/**
- * ============================================
- * Main Server Entry Point - Backend Application
- * ============================================
- * Author: mArtavia.dev | Mauricio Artavia Monge
- * Year: 2026
- *
- * Description:
- * This is the main entry point of the backend server.
- * It initializes the Express application, configures middleware, and registers all API routes.
- *
- * Features:
- * - REST API for sales management
- * - JSON request handling
- * - CORS enabled for frontend integration
- * - Basic request logging middleware
- *
- * NOTE:
- * This server currently uses in-memory data storage.
- * All data will reset when the server restarts.
- *
- * Future improvements:
- * - Environment configuration (dotenv)
- * - Database connection (MongoDB / PostgreSQL)
- * - Centralized error handling
- * - Authentication & authorization (JWT)
- * - Logging system (Winston / Morgan)
- *
- * © 2026 mArtavia.dev — All rights reserved.
- * ============================================
- */
-
 const express = require("express");
 const cors = require("cors");
 
 // Import routes
 const salesRoutes = require("./routes/sales.routes");
+const productsRoutes = require("./routes/products.routes");
 
 const app = express();
 const PORT = 3000;
@@ -45,26 +14,36 @@ const PORT = 3000;
  * ============================================
  */
 
-/**
- * Request Logger Middleware
- * Logs every incoming request (method + endpoint)
- */
+// Request Logger
 app.use((req, res, next) => {
-  console.log(`➡️ Incoming Request: ${req.method} ${req.url}`);
+  console.log(`Incoming Request: ${req.method} ${req.url}`);
   next();
 });
 
-/**
- * Enable CORS
- * Allows frontend apps to communicate with this API
- */
-app.use(cors());
+// Enable CORS: permitir cualquier puerto en localhost o 127.0.0.1
+app.use(cors({
+  origin: function(origin, callback) {
+    // permitir requests sin origin (Postman, curl, etc.)
+    if (!origin) return callback(null, true);
 
-/**
- * JSON Parser Middleware
- * Parses incoming JSON requests into req.body
- */
+    // permitir localhost y 127.0.0.1 con cualquier puerto
+    if (/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)) {
+      return callback(null, true);
+    }
+
+    // bloquear otros orígenes
+    const msg = `CORS no permite este origen: ${origin}`;
+    return callback(new Error(msg), false);
+  },
+  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"]
+}));
+
+// JSON Parser
 app.use(express.json());
+
+// Handle preflight requests
+app.options("*", cors());
 
 /**
  * ============================================
@@ -72,19 +51,16 @@ app.use(express.json());
  * ============================================
  */
 
-/**
- * Health Check Route
- * Used to verify that the server is running
- */
+// Health Check
 app.get("/ping", (req, res) => {
   res.json({ message: "pong" });
 });
 
-/**
- * Sales Routes
- * Base path: /sales
- */
+// Sales routes
 app.use("/sales", salesRoutes);
+
+// Products routes
+app.use("/products", productsRoutes);
 
 /**
  * ============================================
@@ -92,9 +68,6 @@ app.use("/sales", salesRoutes);
  * ============================================
  */
 
-/**
- * Starts the server and listens on defined port
- */
 app.listen(PORT, "0.0.0.0", () => {
-  console.log(`🔥 Server running on http://127.0.0.1:${PORT}`);
+  console.log(`Server running on http://127.0.0.1:${PORT}`);
 });

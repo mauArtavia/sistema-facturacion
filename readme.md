@@ -7,6 +7,7 @@
 ---
 
 ## Table of Contents
+
 1. [Project Overview](#project-overview)
 2. [Technologies](#technologies)
 3. [Architecture](#architecture)
@@ -37,12 +38,14 @@ The project is divided into **backend (API)** and **frontend (React SPA)** for m
 ## Technologies
 
 **Backend:**
+
 - Node.js >= 22
 - Express.js
 - CORS
 - Nodemon (dev)
 
 **Frontend:**
+
 - React 19
 - Recharts
 - Axios
@@ -53,7 +56,7 @@ The project is divided into **backend (API)** and **frontend (React SPA)** for m
 
 ## Architecture
 
-```
+```bash
 
 sales-system/
 │
@@ -89,6 +92,7 @@ sales-system/
 ### Backend
 
 1. Navigate to backend folder:
+
 ```bash
 cd backend
 ````
@@ -129,7 +133,7 @@ npm install
 npm run dev
 ```
 
-Frontend will run at `http://127.0.0.1:5173` (Vite default).
+Frontend will run at `http://127.0.0.1:5173` *(Vite default)*.
 
 ---
 
@@ -137,14 +141,14 @@ Frontend will run at `http://127.0.0.1:5173` (Vite default).
 
 **Features:**
 
-* `POST /sales` → Register a new sale
-* `GET /sales` → Retrieve all sales
+- `POST /sales` → Register a new sale
+- `GET /sales` → Retrieve all sales
 
 **Implementation Notes:**
 
-* Uses in-memory storage (data is lost on server restart)
-* Logging for incoming requests and created sales
-* Future plan: database integration, validation, authentication
+- Uses in-memory storage (data is lost on server restart)
+- Logging for incoming requests and created sales
+- Future plan: database integration, validation, authentication
 
 ---
 
@@ -152,18 +156,18 @@ Frontend will run at `http://127.0.0.1:5173` (Vite default).
 
 **Features:**
 
-* Register sales with amount and payment method
-* Filter sales by date
-* View totals (cash, card, SINPE)
-* Interactive pie chart for payment methods
-* Scrollable sales history
+- Register sales with amount and payment method
+- Filter sales by date
+- View totals (cash, card, SINPE)
+- Interactive pie chart for payment methods
+- Scrollable sales history
 
 **Components:**
 
-* `SalesPage.jsx` → Main interface
-* `api.js` → Axios API client
-* `App.jsx` → Root component
-* `main.jsx` → React DOM render
+- `SalesPage.jsx` → Main interface
+- `api.js` → Axios API client
+- `App.jsx` → Root component
+- `main.jsx` → React DOM render
 
 ---
 
@@ -177,12 +181,12 @@ Frontend will run at `http://127.0.0.1:5173` (Vite default).
 
 ## Future Improvements
 
-* Persist data in a database (MongoDB / PostgreSQL)
-* User authentication & roles
-* Validation middleware for API
-* Multi-day / monthly reports
-* Export sales data to CSV / Excel
-* Deploy to cloud (Vercel / Render / Heroku)
+- Persist data in a database (MongoDB / PostgreSQL)
+- User authentication & roles
+- Validation middleware for API
+- Multi-day / monthly reports
+- Export sales data to CSV / Excel
+- Deploy to cloud (Vercel / Render / Heroku)
 
 ---
 

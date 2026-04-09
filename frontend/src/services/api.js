@@ -9,6 +9,10 @@
  * Centralized API configuration using Axios.
  * This module creates a reusable HTTP client for all backend requests.
  *
+ * Updates:
+ * - Now backend products and sales are stored in a shared in-memory array,
+ *   ensuring product consistency when registering sales.
+ *
  * Purpose:
  * - Avoid repeating base URLs across the app
  * - Provide a single point for configuration (headers, auth, interceptors)
@@ -38,6 +42,19 @@ import axios from "axios";
 const API = axios.create({
   baseURL: "http://127.0.0.1:3000"
 });
+
+/**
+ * ========================
+ * HELPER FUNCTIONS
+ * ========================
+ * Optional shortcuts for common API calls
+ * Keeps frontend code cleaner and centralized
+ */
+API.getSales = () => API.get("/sales");
+API.createSale = (data) => API.post("/sales", data);
+
+API.getProducts = () => API.get("/products");
+API.createProduct = (data) => API.post("/products", data);
 
 /**
  * (Optional - Future)

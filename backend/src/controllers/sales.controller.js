@@ -1,13 +1,13 @@
 /**
  * ============================================
- * Sales Controller - Backend Module
+ * Sales & Products Controller - Backend Module
  * ============================================
  * Author: mArtavia.dev | Mauricio Artavia Monge
  * Year: 2026
  *
  * Description:
- * This controller handles all sales-related operations including creation and
- * retrieval of sales records.
+ * Handles all operations for sales and products including creation,
+ * listing, and linking sales to products.
  *
  * NOTE:
  * This implementation uses in-memory storage.
@@ -22,74 +22,115 @@
  * ============================================
  */
 
-// Temporary in-memory storage
-let sales = [];
+// Shared in-memory storage for both controllers
+const sharedData = {
+  sales: [],
+  products: []
+};
 
 /**
  * ============================================
- * Create a new sale
+ * PRODUCT OPERATIONS
  * ============================================
- * Endpoint: POST /sales
- *
- * Body:
- * {
- *   amount: number,
- *   method: "cash" | "card" | "simpe"
- * }
- *
- * Description:
- * Validates input data, creates a new sale object, stores it in memory, and
- * returns the created sale.
  */
-const createSale = (req, res) => {
-  console.log("Incoming request body:", req.body);
 
-  const { amount, method } = req.body;
+/**
+ * Create a new product
+ * POST /sales/products
+ * Body: { name: string, price: number }
+ */
+const createProduct = (req, res) => {
+  const { name, price } = req.body;
 
-  // Basic validation
-  if (!amount || !method) {
-    return res.status(400).json({
-      message: "Amount and method are required"
-    });
+  if (!name || price === undefined) {
+    return res.status(400).json({ message: "Name and price are required" });
   }
 
-  // Create new sale object
-  const newSale = {
-    id: Date.now(), // Simple unique identifier
-    amount,
-    method,
-    createdAt: new Date() // Timestamp
+  const newProduct = {
+    id: Date.now(),
+    name,
+    price,
+    createdAt: new Date()
   };
 
-  // Store sale
-  sales.push(newSale);
+  sharedData.products.push(newProduct);
 
-  console.log("Sale successfully created:", newSale);
+  console.log("Product created:", newProduct);
 
-  // Return created sale
+  res.status(201).json(newProduct);
+};
+
+/**
+ * Get all products
+ * GET /sales/products
+ */
+const getProducts = (req, res) => {
+  res.json(sharedData.products);
+};
+
+/**
+ * ============================================
+ * SALES OPERATIONS
+ * ============================================
+ */
+
+/**
+ * Create a new sale
+ * POST /sales
+ * Body: { amount: number, method: string, productId?: number }
+ */
+const createSale = (req, res) => {
+  const { amount, method, productId } = req.body;
+
+  if (!amount || !method) {
+    return res.status(400).json({ message: "Amount and method are required" });
+  }
+
+  // Attach product info if productId is provided
+  let productInfo = null;
+
+  // Validar correctamente productId (evitar null, "", NaN)
+  const pid = Number(productId);
+
+  if (!isNaN(pid) && pid > 0) {
+    productInfo = sharedData.products.find((p) => p.id === pid);
+    if (!productInfo) {
+      return res.status(404).json({ message: "Product not found" });
+    }
+  }
+
+  const newSale = {
+    id: Date.now(),
+    amount,
+    method,
+    product: productInfo ? { ...productInfo } : null,
+    createdAt: new Date()
+  };
+
+  sharedData.sales.push(newSale);
+
+  console.log("Sale created:", newSale);
+
   res.status(201).json(newSale);
 };
 
 /**
- * ============================================
  * Get all sales
- * ============================================
- * Endpoint: GET /sales
- *
- * Description:
- * Returns the full list of stored sales.
+ * GET /sales
  */
 const getSales = (req, res) => {
-  res.json(sales);
+  res.json(sharedData.sales);
 };
 
 /**
  * ============================================
- * Module Exports
+ * MODULE EXPORTS
  * ============================================
- * Explicit export for clarity and scalability.
  */
 module.exports = {
   createSale,
-  getSales
+  getSales,
+  createProduct,
+  getProducts,
+  sharedData
 };
