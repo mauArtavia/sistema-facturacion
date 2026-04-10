@@ -42,14 +42,21 @@ const sharedData = {
 const createProduct = (req, res) => {
   const { name, price } = req.body;
 
+  // Validaciones
   if (!name || price === undefined) {
     return res.status(400).json({ message: "Name and price are required" });
+  }
+
+  const parsedPrice = Number(price);
+
+  if (isNaN(parsedPrice) || parsedPrice <= 0) {
+    return res.status(400).json({ message: "Price must be greater than 0"});
   }
 
   const newProduct = {
     id: Date.now(),
     name,
-    price,
+    price : parsedPrice,
     createdAt: new Date()
   };
 
@@ -82,8 +89,15 @@ const getProducts = (req, res) => {
 const createSale = (req, res) => {
   const { amount, method, productId } = req.body;
 
-  if (!amount || !method) {
+  // Validaciones base
+  if (amount == undefined || !method) {
     return res.status(400).json({ message: "Amount and method are required" });
+  }
+
+  const parsedAmount = Number(amount);
+
+  if (isNaN(parsedAmount) || parsedAmount <= 0) {
+    return res.status(400),json( { message: "Amount must be greater than 0" } );
   }
 
   // Attach product info if productId is provided
@@ -101,7 +115,7 @@ const createSale = (req, res) => {
 
   const newSale = {
     id: Date.now(),
-    amount,
+    amount: parsedAmount,
     method,
     product: productInfo ? { ...productInfo } : null,
     createdAt: new Date()

@@ -40,6 +40,8 @@ function SalesPage() {
   const [selectedDate, setSelectedDate] = useState(
     new Date().toISOString().split("T")[0]
   );
+  const [isHovering, setIsHovering] = useState(false);
+  const [toast, setToast] = useState(null);
 
   // Nuevo producto
   const [newProductName, setNewProductName] = useState("");
@@ -69,6 +71,14 @@ function SalesPage() {
       hour: "2-digit",
       minute: "2-digit"
     }).format(new Date(date));
+
+    const showToast = (message, type = "success") => {
+    setToast({message, type});
+
+    setTimeout(() => {
+      setToast(null);
+    }, 3000);
+  }
 
   // ========================
   // API INTEGRATION (USING HELPERS)
@@ -112,7 +122,9 @@ function SalesPage() {
   // REGISTER SALE
   // ========================
   const handleRegister = async () => {
-    if (!amount) return alert("Ingrese un monto");
+    if (!amount || Number(amount) <= 0) {
+      return showToast("Ingrese un monto mayor a 0.", "Error");
+    }
 
     setLoading(true);
     try {
@@ -132,8 +144,9 @@ function SalesPage() {
       setSales((prev) => [...prev, saleData]);
       setAmount("");
       setSelectedProduct("");
+      showToast("Venta registrada correctamente");
     } catch (err) {
-      alert("Error registrando");
+      showToast("Error registrando", "Error");
       console.error(err);
     } finally {
       setLoading(false);
@@ -144,8 +157,8 @@ function SalesPage() {
   // CREATE PRODUCT
   // ========================
   const handleCreateProduct = async () => {
-    if (!newProductName || !newProductPrice) {
-      return alert("Ingrese nombre y precio del producto");
+    if (!newProductName || Number(newProductPrice) <= 0 ) {
+      return showToast("Ingrese nombre y precio del producto mayor a 0.", "Error");
     }
 
     try {
@@ -157,8 +170,9 @@ function SalesPage() {
       setProducts((prev) => [...prev, res.data]);
       setNewProductName("");
       setNewProductPrice("");
+      showToast("Producto creado correctamente");
     } catch (err) {
-      alert("Error creando producto");
+      showToast("Error creando producto", "Error");
       console.error(err);
     }
   };
@@ -219,6 +233,7 @@ function SalesPage() {
             />
             <input
               type="number"
+              min="1"
               placeholder="Precio"
               value={newProductPrice}
               onChange={(e) => setNewProductPrice(e.target.value)}
@@ -246,10 +261,16 @@ function SalesPage() {
 
             <input
               type="number"
+              min="1"
               placeholder="Monto"
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
-              style={styles.input}
+              style={{
+                ...styles.input,
+                backgroundColor: selectedProduct ? "#e5e7eb" : "white",
+                cursor: selectedProduct ? "not-allowed" : "text"
+              }}
+              disabled={!!selectedProduct}
             />
 
             <select
@@ -264,7 +285,14 @@ function SalesPage() {
 
             <button
               onClick={handleRegister}
-              style={styles.button}
+              onMouseEnter={() => setIsHovering(true)}
+              onMouseLeave={() => setIsHovering(false)}
+              style={{
+                ...styles.button,
+                ...(isHovering ? styles.buttonHover : {}),
+                opacity: loading ? 0.6 : 1,
+                cursor: loading ? "not-allowed" : "pointer"
+              }}
               disabled={loading}
             >
               {loading ? "Registrando..." : "Registrar Venta"}
@@ -352,6 +380,24 @@ function SalesPage() {
         </div>
       </div>
 
+      {toast && (
+        <div
+          style={{
+            position: "fixed",
+            bottom: "20px",
+            right: "20px",
+            padding: "12px 16px",
+            borderRadius: "6px",
+            backgroundColor: toast.type === "Error" ? "#dc2626" : "#16a34a",
+            color: "white",
+            fontWeight: "bold",
+            boxShadow: "0 4px 10px rgba(0,0,0,0.2)"
+          }}
+        >
+          {toast.message}
+        </div>
+      )}
+
       {/* Footer */}
       <div style={styles.footer}>© 2026 mArtavia.dev — All rights reserved.</div>
     </div>
@@ -366,29 +412,109 @@ function SalesPage() {
 
 const baseField = {
   width: "100%",
-  padding: "10px",
-  marginBottom: "10px",
-  borderRadius: "5px",
-  border: "1px solid #3D848F",
-  height: "42px",
-  fontSize: "16px",
-  boxSizing: "border-box"
+  padding: "12px",
+  marginBottom: "16px",
+  borderRadius: "6px",
+  border: "1px solid #d1d5db",
+  height: "44px",
+  fontSize: "15px",
+  boxSizing: "border-box",
+  outline: "none",
+  transition: "border 0.2s ease, box-shadow 0.2s ease"
 };
 
 const styles = {
-  container: { maxWidth: "900px", margin: "auto", padding: "20px", fontFamily: "Arial" },
-  title: { textAlign: "center", marginBottom: "20px" },
-  grid: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: "15px" },
-  card: { background: "#f5f5f5", padding: "15px", borderRadius: "10px", marginBottom: "15px", boxShadow: "0 2px 5px rgba(0,0,0,0.1)" },
-  chartContainer: { display: "flex", justifyContent: "center", alignItems: "center" },
-  cardScrollable: { maxHeight: "300px", overflowY: "auto" },
-  input: { ...baseField },
-  select: { ...baseField, backgroundColor: "white" },
-  button: { width: "100%", padding: "12px", background: "#3D848F", color: "white", border: "none", borderRadius: "5px", fontWeight: "bold", cursor: "pointer" },
-  saleItem: { display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px", borderBottom: "1px solid #3D848F" },
-  saleMeta: { fontSize: "12px", color: "#666" },
-  saleMetaRight: { fontSize: "12px", color: "#666", textAlign: "right" },
-  footer: { marginTop: "20px", textAlign: "center", fontSize: "12px", color: "#888" }
+  container: {
+    maxWidth: "960px",
+    margin: "auto",
+    padding: "25px",
+    fontFamily: "Arial"
+  },
+
+  title: {
+    textAlign: "center",
+    marginBottom: "30px",
+    fontSize: "28px",
+    fontWeight: "bold"
+  },
+
+  grid: {
+    display: "grid",
+    gridTemplateColumns: "1fr 1fr",
+    gap: "20px"
+  },
+
+  card: {
+    background: "#ffffff",
+    padding: "20px",
+    borderRadius: "12px",
+    marginBottom: "20px",
+    boxShadow: "0 4px 10px rgba(0,0,0,0.06)"
+  },
+
+  chartContainer: {
+    display: "flex",
+    justifyContent: "center",
+    alignItems: "center"
+  },
+
+  cardScrollable: {
+    maxHeight: "320px",
+    overflowY: "auto"
+  },
+
+  input: {
+    ...baseField
+  },
+
+  select: {
+    ...baseField,
+    backgroundColor: "white",
+    cursor: "pointer"
+  },
+
+  button: {
+    width: "100%",
+    padding: "12px",
+    background: "#3D848F",
+    color: "white",
+    border: "none",
+    borderRadius: "6px",
+    fontWeight: "bold",
+    cursor: "pointer",
+    transition: "all 0.2s ease"
+  },
+
+  buttonHover: {
+    background: "#326e77"
+  },
+
+  saleItem: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    padding: "12px",
+    borderBottom: "1px solid #3D848F"
+  },
+
+  saleMeta: {
+    fontSize: "12px",
+    color: "#666",
+    marginTop: "4px"
+  },
+
+  saleMetaRight: {
+    fontSize: "12px",
+    color: "#666",
+    textAlign: "right"
+  },
+
+  footer: {
+    marginTop: "25px",
+    textAlign: "center",
+    fontSize: "12px",
+    color: "#888"
+  }
 };
 
 export default SalesPage;
