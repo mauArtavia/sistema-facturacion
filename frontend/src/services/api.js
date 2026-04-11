@@ -37,7 +37,6 @@ import axios from "axios";
 
 /**
  * Create Axios instance
- * This allows global configuration for all HTTP requests
  */
 const API = axios.create({
   baseURL: "http://127.0.0.1:3000"
@@ -47,14 +46,36 @@ const API = axios.create({
  * ========================
  * HELPER FUNCTIONS
  * ========================
- * Optional shortcuts for common API calls
- * Keeps frontend code cleaner and centralized
  */
+
+// ========================
+// SALES
+// ========================
 API.getSales = () => API.get("/sales");
 API.createSale = (data) => API.post("/sales", data);
 
+// ========================
+// PRODUCTS
+// ========================
 API.getProducts = () => API.get("/products");
 API.createProduct = (data) => API.post("/products", data);
+
+// ========================
+// REPORTS
+// ========================
+
+// 🔥 Reporte por rango (principal)
+API.getReportByRange = (start, end) =>
+  API.get(`/reports/range?start=${start}&end=${end}`);
+
+// Reporte diario
+API.getDailyReport = () => API.get("/reports/daily");
+
+// Reporte semanal
+API.getWeeklyReport = () => API.get("/reports/weekly");
+
+// Reporte por método de pago
+API.getReportByMethod = () => API.get("/reports/by-method");
 
 /**
  * (Optional - Future)

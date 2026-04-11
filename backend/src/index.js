@@ -30,6 +30,7 @@ const cors = require("cors");
 // Import routes
 const salesRoutes = require("./routes/sales.routes");
 const productsRoutes = require("./routes/products.routes");
+const reportsRoutes = require("./routes/reports.routes")
 
 const app = express();
 const PORT = 3000;
@@ -102,6 +103,8 @@ app.use("/sales", salesRoutes);
  * Base path: /products
  */
 app.use("/products", productsRoutes);
+
+app.use("/reports", reportsRoutes);
 
 /**
  * ============================================

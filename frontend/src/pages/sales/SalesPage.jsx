@@ -7,24 +7,25 @@
  *
  * Description:
  * Complete sales management interface with products.
- * - Register new sales (product or manual amount)
- * - Create and list products
- * - Filter sales by date
- * - Visualize data using charts
- * - View summarized financial data
- * - Inspect detailed sales history
+ *
+ *  - Register new sales (product or manual amount)
+ *  - Create and list products
+ *  - Filter sales by date
+ *  - Visualize data using charts
+ *  - View summarized financial data
+ *  - Inspect detailed sales history
  *
  * Technologies:
- * - React (Hooks: useState, useEffect, useMemo)
- * - Recharts (Data visualization)
- * - Custom API service (Axios-based)
+ *  - React (Hooks: useState, useEffect, useMemo)
+ *  - Recharts (Data visualization)
+ *  - Custom API service (Axios-based)
  *
  * © 2026 mArtavia.dev — All rights reserved.
  * ============================================
  */
 
 import { useState, useEffect, useMemo } from "react";
-import API from "../services/api";
+import API from "../../services/api";
 import { PieChart, Pie, Cell, Tooltip, Legend } from "recharts";
 
 function SalesPage() {
@@ -37,11 +38,25 @@ function SalesPage() {
   const [method, setMethod] = useState("cash");
   const [products, setProducts] = useState([]);
   const [sales, setSales] = useState([]);
-  const [selectedDate, setSelectedDate] = useState(
+
+  // 🔥 RANGO DE FECHAS (REPORTE REAL)
+  const [startDate, setStartDate] = useState(
     new Date().toISOString().split("T")[0]
   );
+  const [endDate, setEndDate] = useState(
+    new Date().toISOString().split("T")[0]
+  );
+
   const [selectedProduct, setSelectedProduct] = useState("");
   const [toast, setToast] = useState(null);
+
+  // Reporte backend
+  const [report, setReport] = useState({
+    total: 0,
+    totalCash: 0,
+    totalCard: 0,
+    totalSinpe: 0
+  });
 
   // Nuevo producto
   const [newProductName, setNewProductName] = useState("");
@@ -72,13 +87,13 @@ function SalesPage() {
       minute: "2-digit"
     }).format(new Date(date));
 
-    const showToast = (message, type = "success") => {
-    setToast({message, type});
+  const showToast = (message, type = "success") => {
+    setToast({ message, type });
 
     setTimeout(() => {
       setToast(null);
     }, 3000);
-  }
+  };
 
   // ========================
   // API INTEGRATION (USING HELPERS)
@@ -86,7 +101,7 @@ function SalesPage() {
   useEffect(() => {
     const fetchSales = async () => {
       try {
-        const res = await API.getSales(); // <-- helper
+        const res = await API.getSales();
         setSales(res.data);
       } catch (err) {
         console.error("Error fetching sales:", err);
@@ -95,7 +110,7 @@ function SalesPage() {
 
     const fetchProducts = async () => {
       try {
-        const res = await API.getProducts(); // <-- helper
+        const res = await API.getProducts();
         setProducts(res.data);
       } catch (err) {
         console.error("Error fetching products:", err);
@@ -105,6 +120,104 @@ function SalesPage() {
     fetchSales();
     fetchProducts();
   }, []);
+
+  // ========================
+  // DATE PRESETS 🔥
+  // ========================
+  const getTodayRange = () => {
+    const today = new Date();
+    const date = today.toISOString().split("T")[0];
+    return { start: date, end: date };
+  };
+
+  const getWeekRange = () => {
+    const today = new Date();
+    const day = today.getDay();
+
+    const diffToMonday = day === 0 ? -6 : 1 - day;
+
+    const monday = new Date(today);
+    monday.setDate(today.getDate() + diffToMonday);
+
+    const sunday = new Date(monday);
+    sunday.setDate(monday.getDate() + 6);
+
+    return {
+      start: monday.toISOString().split("T")[0],
+      end: sunday.toISOString().split("T")[0]
+    };
+  };
+
+  const getMonthRange = () => {
+    const today = new Date();
+
+    const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
+    const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+
+    return {
+      start: firstDay.toISOString().split("T")[0],
+      end: lastDay.toISOString().split("T")[0]
+    };
+  };
+
+  const getLast7DaysRange = () => {
+    const today = new Date();
+    const past = new Date();
+    past.setDate(today.getDate() - 6);
+
+    return {
+      start: past.toISOString().split("T")[0],
+      end: today.toISOString().split("T")[0]
+    };
+  };  
+
+  const getLast30DaysRange = () => {
+    const today = new Date();
+    const past = new Date();
+    past.setDate(today.getDate() - 29);
+
+    return {
+      start: past.toISOString().split("T")[0],
+      end: today.toISOString().split("T")[0]
+    };
+  };
+
+  const getYesterdayRange = () => {
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+
+    const date = yesterday.toISOString().split("T")[0];
+
+    return { start: date, end: date };
+  };
+
+  const applyPreset = (type) => {
+    let range;
+
+    if (type === "today") range = getTodayRange();
+    if (type === "week") range = getWeekRange();
+    if (type === "month") range = getMonthRange();
+    if (type === "last7") range = getLast7DaysRange();
+    if (type === "last30") range = getLast30DaysRange();
+    if (type === "yesterday") range = getYesterdayRange();
+
+    setStartDate(range.start);
+    setEndDate(range.end);
+  };
+
+  const fetchReport = async () => {
+    try {
+      const res = await API.getReportByRange(startDate, endDate);
+      setReport(res.data);
+    } catch (err) {
+      console.error("Error fetching report:", err);
+    }
+  };
+
+  // FETCH REPORT DESDE BACKEND
+  useEffect(() => {
+    fetchReport();
+  }, [startDate, endDate]);
 
   // ========================
   // PRODUCT SELECTION
@@ -128,20 +241,23 @@ function SalesPage() {
 
     setLoading(true);
     try {
-      const res = await API.createSale({ // <-- helper
+      const res = await API.createSale({
         amount: Number(amount),
         method,
         productId: selectedProduct ? Number(selectedProduct) : null
       });
 
-      // Agregar nombre del producto al objeto de venta para frontend
       const saleData = { ...res.data };
+
       if (selectedProduct) {
         const prod = products.find((p) => p.id === Number(selectedProduct));
         if (prod) saleData.product = { ...prod };
       }
 
       setSales((prev) => [...prev, saleData]);
+
+      await fetchReport();
+
       setAmount("");
       setSelectedProduct("");
       showToast("Venta registrada correctamente");
@@ -157,12 +273,15 @@ function SalesPage() {
   // CREATE PRODUCT
   // ========================
   const handleCreateProduct = async () => {
-    if (!newProductName || Number(newProductPrice) <= 0 ) {
-      return showToast("Ingrese nombre y precio del producto mayor a 0.", "Error");
+    if (!newProductName || Number(newProductPrice) <= 0) {
+      return showToast(
+        "Ingrese nombre y precio del producto mayor a 0.",
+        "Error"
+      );
     }
 
     try {
-      const res = await API.createProduct({ // <-- helper
+      const res = await API.createProduct({
         name: newProductName,
         price: Number(newProductPrice)
       });
@@ -180,35 +299,28 @@ function SalesPage() {
   // ========================
   // DATA PROCESSING
   // ========================
-  const filteredSales = useMemo(
-    () =>
-      sales.filter(
-        (sale) =>
-          new Date(sale.createdAt).toISOString().split("T")[0] ===
-          selectedDate
-      ),
-    [sales, selectedDate]
-  );
+  const filteredSales = useMemo(() => {
+    return sales.filter((sale) => {
+      const saleDate = new Date(sale.createdAt);
 
-  const { total, totalCash, totalCard, totalSinpe } = useMemo(() => {
-    let total = 0,
-      totalCash = 0,
-      totalCard = 0,
-      totalSinpe = 0;
-    for (const s of filteredSales) {
-      total += s.amount;
-      if (s.method === "cash") totalCash += s.amount;
-      else if (s.method === "card") totalCard += s.amount;
-      else if (s.method === "sinpe") totalSinpe += s.amount;
-    }
-    return { total, totalCash, totalCard, totalSinpe };
-  }, [filteredSales]);
+      const [yearS, monthS, dayS] = startDate.split("-");
+      const start = new Date(yearS, monthS - 1, dayS, 0, 0, 0, 0);
+      start.setHours(0, 0, 0, 0);
+
+      const [yearE, monthE, dayE] = endDate.split("-");
+      const end = new Date(yearE, monthE - 1, dayE, 23, 59, 59, 999);
+      end.setHours(23, 59, 59, 999);
+
+      return saleDate >= start && saleDate <= end;
+    });
+  }, [sales, startDate, endDate]);
 
   const chartData = [
-    { name: "Efectivo", value: totalCash },
-    { name: "Tarjeta", value: totalCard },
-    { name: "SINPE", value: totalSinpe }
+    { name: "Efectivo", value: report.totalCash },
+    { name: "Tarjeta", value: report.totalCard },
+    { name: "SINPE", value: report.totalSinpe }
   ];
+
   const COLORS = ["#3D848F", "#314245", "#B6B5B8"];
 
   // ========================
@@ -265,11 +377,7 @@ function SalesPage() {
               placeholder="Monto"
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
-              style={{
-                ...styles.input,
-                backgroundColor: selectedProduct ? "#e5e7eb" : "white",
-                cursor: selectedProduct ? "not-allowed" : "text"
-              }}
+              style={styles.input}
               disabled={!!selectedProduct}
             />
 
@@ -285,76 +393,82 @@ function SalesPage() {
 
             <button
               onClick={handleRegister}
-              onMouseEnter={() => setIsHovering(true)}
-              onMouseLeave={() => setIsHovering(false)}
-              style={{
-                ...styles.button,
-                ...(isHovering ? styles.buttonHover : {}),
-                opacity: loading ? 0.6 : 1,
-                cursor: loading ? "not-allowed" : "pointer"
-              }}
+              style={styles.button}
               disabled={loading}
             >
               {loading ? "Registrando..." : "Registrar Venta"}
             </button>
           </div>
 
-          {/* Date Filter */}
-          <div style={styles.card}>
-            <h2>Fecha</h2>
-            <input
-              type="date"
-              value={selectedDate}
-              onChange={(e) => setSelectedDate(e.target.value)}
-              style={styles.input}
-            />
-          </div>
-
-          {/* Chart Visualization */}
+          {/* Chart */}
           <div style={styles.card}>
             <h2 style={{ textAlign: "center" }}>Métodos de pago</h2>
-            <div style={styles.chartContainer}>
-              <PieChart width={320} height={280}>
-                <Pie
-                  data={chartData}
-                  dataKey="value"
-                  nameKey="name"
-                  cx="50%"
-                  cy="50%"
-                  outerRadius={90}
-                  label
-                >
-                  {chartData.map((entry, index) => (
-                    <Cell key={index} fill={COLORS[index]} />
-                  ))}
-                </Pie>
-                <Tooltip formatter={(value) => formatCRC(value)} />
-                <Legend />
-              </PieChart>
-            </div>
+            <PieChart width={320} height={280}>
+              <Pie data={chartData} dataKey="value" label>
+                {chartData.map((_, i) => (
+                  <Cell key={i} fill={COLORS[i]} />
+                ))}
+              </Pie>
+              <Tooltip formatter={(v) => formatCRC(v)} />
+              <Legend />
+            </PieChart>
           </div>
         </div>
 
         {/* RIGHT PANEL */}
         <div>
-          {/* Summary */}
+          {/* DATE RANGE */}
           <div style={styles.card}>
-            <h2>Resumen</h2>
-            <p>
-              <b>Total:</b> {formatCRC(total)}
-            </p>
-            <p>
-              <b>Efectivo:</b> {formatCRC(totalCash)}
-            </p>
-            <p>
-              <b>Tarjeta:</b> {formatCRC(totalCard)}
-            </p>
-            <p>
-              <b>SINPE:</b> {formatCRC(totalSinpe)}
-            </p>
+            <h2>Rango de fechas</h2>
+
+            {/* PRESETS */}
+            <div style={styles.presetContainer}>
+              <button onClick={() => applyPreset("today")} style={styles.presetButton}>
+                Hoy
+              </button>
+              <button onClick={() => applyPreset("yesterday")} style={styles.presetButton}>
+                Ayer
+              </button>
+              <button onClick={() => applyPreset("week")} style={styles.presetButton}>
+                Semana
+              </button>
+              <button onClick={() => applyPreset("month")} style={styles.presetButton}>
+                Mes
+              </button>
+            </div>
+            
+            <div style={styles.presetContainer}>
+              <button onClick={() => applyPreset("last7")} style={styles.presetButton}>
+                Últimos 7 días
+              </button>
+              <button onClick={() => applyPreset("last30")} style={styles.presetButton}>
+                Últimos 30 días
+              </button>
+            </div>
+
+            <input
+              type="date"
+              value={startDate}
+              onChange={(e) => setStartDate(e.target.value)}
+              style={styles.input}
+            />
+
+            <input
+              type="date"
+              value={endDate}
+              onChange={(e) => setEndDate(e.target.value)}
+              style={styles.input}
+            />
           </div>
 
-          {/* Sales History */}
+          <div style={styles.card}>
+            <h2>Resumen</h2>
+            <p><b>Total:</b> {formatCRC(report.total)}</p>
+            <p><b>Efectivo:</b> {formatCRC(report.totalCash)}</p>
+            <p><b>Tarjeta:</b> {formatCRC(report.totalCard)}</p>
+            <p><b>SINPE:</b> {formatCRC(report.totalSinpe)}</p>
+          </div>
+
           <div style={{ ...styles.card, ...styles.cardScrollable }}>
             <h2>Historial</h2>
             {filteredSales.length === 0 ? (
@@ -390,16 +504,16 @@ function SalesPage() {
             borderRadius: "6px",
             backgroundColor: toast.type === "Error" ? "#dc2626" : "#16a34a",
             color: "white",
-            fontWeight: "bold",
-            boxShadow: "0 4px 10px rgba(0,0,0,0.2)"
+            fontWeight: "bold"
           }}
         >
           {toast.message}
         </div>
       )}
 
-      {/* Footer */}
-      <div style={styles.footer}>© 2026 mArtavia.dev — All rights reserved.</div>
+      <div style={styles.footer}>
+        © 2026 mArtavia.dev — All rights reserved.
+      </div>
     </div>
   );
 }
@@ -509,6 +623,23 @@ const styles = {
     textAlign: "right"
   },
 
+  presetContainer: {
+    display: "flex",
+    gap: "10px",
+    marginBottom: "12px"
+  },
+
+  presetButton: {
+    flex: 1,
+    padding: "10px",
+    background: "#3D848F",
+    color: "white",
+    border: "none",
+    borderRadius: "6px",
+    fontWeight: "bold",
+    cursor: "pointer"
+  },
+
   footer: {
     marginTop: "25px",
     textAlign: "center",
@@ -516,5 +647,6 @@ const styles = {
     color: "#888"
   }
 };
+
 
 export default SalesPage;
