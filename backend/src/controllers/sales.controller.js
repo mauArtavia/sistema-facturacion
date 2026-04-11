@@ -1,139 +1,148 @@
 /**
  * ============================================
- * Sales & Products Controller - Backend Module
+ * Sales Controller - Backend Module
  * ============================================
  * Author: mArtavia.dev | Mauricio Artavia Monge
  * Year: 2026
  *
  * Description:
- * Handles all operations for sales and products including creation,
- * listing, and linking sales to products.
+ * Handles all operations related to sales in the POS system.
  *
- * NOTE:
- * This implementation uses in-memory storage.
- * Data will be lost on server restart.
+ * This controller uses Prisma ORM connected to a SQLite database,
+ * replacing the previous in-memory storage approach.
+ *
+ * Responsibilities:
+ * - Validate incoming sale data
+ * - Link sales optionally to products
+ * - Persist sales in the database
+ * - Retrieve sales with associated product information
+ *
+ * Key Features:
+ * - Supports sales with or without linked products
+ * - Automatically includes product data in responses
+ * - Ensures data integrity through validation
+ *
+ * Improvements over previous version:
+ * - Persistent storage (sales survive server restarts)
+ * - Relational data (sales ↔ products)
+ * - Scalable query structure for reports and filters
  *
  * Future improvements:
- * - Database integration
- * - Validation middleware
- * - Authentication & authorization
+ * - Add filters (date range, method)
+ * - Add aggregations (daily, weekly reports)
+ * - Add pagination for large datasets
+ * - Add DTO/schema validation (Zod or Joi)
  *
  * © 2026 mArtavia.dev — All rights reserved.
  * ============================================
  */
 
-// Shared in-memory storage for both controllers
-const sharedData = {
-  sales: [],
-  products: []
-};
+const prisma = require("../config/prisma");
 
 /**
  * ============================================
- * PRODUCT OPERATIONS
+ * CREATE SALE
  * ============================================
+ * @route   POST /sales
+ * @desc    Create a new sale
+ * @access  Public
+ * @body    { amount: number, method: string, productId?: number }
  */
+const createSale = async (req, res) => {
+  try {
+    const { amount, method, productId } = req.body;
 
-/**
- * Create a new product
- * POST /sales/products
- * Body: { name: string, price: number }
- */
-const createProduct = (req, res) => {
-  const { name, price } = req.body;
-
-  // Validaciones
-  if (!name || price === undefined) {
-    return res.status(400).json({ message: "Name and price are required" });
-  }
-
-  const parsedPrice = Number(price);
-
-  if (isNaN(parsedPrice) || parsedPrice <= 0) {
-    return res.status(400).json({ message: "Price must be greater than 0"});
-  }
-
-  const newProduct = {
-    id: Date.now(),
-    name,
-    price : parsedPrice,
-    createdAt: new Date()
-  };
-
-  sharedData.products.push(newProduct);
-
-  console.log("Product created:", newProduct);
-
-  res.status(201).json(newProduct);
-};
-
-/**
- * Get all products
- * GET /sales/products
- */
-const getProducts = (req, res) => {
-  res.json(sharedData.products);
-};
-
-/**
- * ============================================
- * SALES OPERATIONS
- * ============================================
- */
-
-/**
- * Create a new sale
- * POST /sales
- * Body: { amount: number, method: string, productId?: number }
- */
-const createSale = (req, res) => {
-  const { amount, method, productId } = req.body;
-
-  // Validaciones base
-  if (amount == undefined || !method) {
-    return res.status(400).json({ message: "Amount and method are required" });
-  }
-
-  const parsedAmount = Number(amount);
-
-  if (isNaN(parsedAmount) || parsedAmount <= 0) {
-    return res.status(400),json( { message: "Amount must be greater than 0" } );
-  }
-
-  // Attach product info if productId is provided
-  let productInfo = null;
-
-  // Validar correctamente productId (evitar null, "", NaN)
-  const pid = Number(productId);
-
-  if (!isNaN(pid) && pid > 0) {
-    productInfo = sharedData.products.find((p) => p.id === pid);
-    if (!productInfo) {
-      return res.status(404).json({ message: "Product not found" });
+    // Basic validation
+    if (amount === undefined || !method) {
+      return res.status(400).json({
+        message: "Amount and method are required"
+      });
     }
+
+    const parsedAmount = Number(amount);
+
+    if (isNaN(parsedAmount) || parsedAmount <= 0) {
+      return res.status(400).json({
+        message: "Amount must be greater than 0"
+      });
+    }
+
+    let product = null;
+
+    /**
+     * Validate and fetch product if productId is provided
+     */
+    if (productId) {
+      const pid = Number(productId);
+
+      if (!isNaN(pid)) {
+        product = await prisma.product.findUnique({
+          where: { id: pid }
+        });
+
+        if (!product) {
+          return res.status(404).json({
+            message: "Product not found"
+          });
+        }
+      }
+    }
+
+    /**
+     * Create sale in database
+     */
+    const newSale = await prisma.sale.create({
+      data: {
+        amount: parsedAmount,
+        method,
+        productId: product ? product.id : null
+      },
+      include: {
+        product: true
+      }
+    });
+
+    console.log("Sale created:", newSale);
+
+    return res.status(201).json(newSale);
+
+  } catch (error) {
+    console.error("Error creating sale:", error);
+
+    return res.status(500).json({
+      message: "Error creating sale"
+    });
   }
-
-  const newSale = {
-    id: Date.now(),
-    amount: parsedAmount,
-    method,
-    product: productInfo ? { ...productInfo } : null,
-    createdAt: new Date()
-  };
-
-  sharedData.sales.push(newSale);
-
-  console.log("Sale created:", newSale);
-
-  res.status(201).json(newSale);
 };
 
 /**
- * Get all sales
- * GET /sales
+ * ============================================
+ * GET SALES
+ * ============================================
+ * @route   GET /sales
+ * @desc    Retrieve all sales with product info
+ * @access  Public
  */
-const getSales = (req, res) => {
-  res.json(sharedData.sales);
+const getSales = async (req, res) => {
+  try {
+    const sales = await prisma.sale.findMany({
+      include: {
+        product: true
+      },
+      orderBy: {
+        createdAt: "desc"
+      }
+    });
+
+    return res.json(sales);
+
+  } catch (error) {
+    console.error("Error fetching sales:", error);
+
+    return res.status(500).json({
+      message: "Error fetching sales"
+    });
+  }
 };
 
 /**
@@ -143,8 +152,5 @@ const getSales = (req, res) => {
  */
 module.exports = {
   createSale,
-  getSales,
-  createProduct,
-  getProducts,
-  sharedData
+  getSales
 };

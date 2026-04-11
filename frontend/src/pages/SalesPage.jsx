@@ -32,22 +32,22 @@ function SalesPage() {
   // STATE MANAGEMENT
   // ========================
   const [amount, setAmount] = useState("");
-  const [method, setMethod] = useState("cash");
-  const [sales, setSales] = useState([]);
-  const [products, setProducts] = useState([]);
-  const [selectedProduct, setSelectedProduct] = useState("");
+  const [isHovering, setIsHovering] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [method, setMethod] = useState("cash");
+  const [products, setProducts] = useState([]);
+  const [sales, setSales] = useState([]);
   const [selectedDate, setSelectedDate] = useState(
     new Date().toISOString().split("T")[0]
   );
-  const [isHovering, setIsHovering] = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState("");
   const [toast, setToast] = useState(null);
 
   // Nuevo producto
   const [newProductName, setNewProductName] = useState("");
   const [newProductPrice, setNewProductPrice] = useState("");
 
-  const methodLabels = { cash: "Efectivo", card: "Tarjeta", simpe: "SINPE" };
+  const methodLabels = { cash: "Efectivo", card: "Tarjeta", sinpe: "SINPE" };
 
   // ========================
   // FORMATTERS
@@ -190,24 +190,24 @@ function SalesPage() {
     [sales, selectedDate]
   );
 
-  const { total, totalCash, totalCard, totalSimpe } = useMemo(() => {
+  const { total, totalCash, totalCard, totalSinpe } = useMemo(() => {
     let total = 0,
       totalCash = 0,
       totalCard = 0,
-      totalSimpe = 0;
+      totalSinpe = 0;
     for (const s of filteredSales) {
       total += s.amount;
       if (s.method === "cash") totalCash += s.amount;
       else if (s.method === "card") totalCard += s.amount;
-      else if (s.method === "simpe") totalSimpe += s.amount;
+      else if (s.method === "sinpe") totalSinpe += s.amount;
     }
-    return { total, totalCash, totalCard, totalSimpe };
+    return { total, totalCash, totalCard, totalSinpe };
   }, [filteredSales]);
 
   const chartData = [
     { name: "Efectivo", value: totalCash },
     { name: "Tarjeta", value: totalCard },
-    { name: "SINPE", value: totalSimpe }
+    { name: "SINPE", value: totalSinpe }
   ];
   const COLORS = ["#3D848F", "#314245", "#B6B5B8"];
 
@@ -280,7 +280,7 @@ function SalesPage() {
             >
               <option value="cash">Efectivo</option>
               <option value="card">Tarjeta</option>
-              <option value="simpe">SINPE</option>
+              <option value="sinpe">SINPE</option>
             </select>
 
             <button
@@ -350,7 +350,7 @@ function SalesPage() {
               <b>Tarjeta:</b> {formatCRC(totalCard)}
             </p>
             <p>
-              <b>SINPE:</b> {formatCRC(totalSimpe)}
+              <b>SINPE:</b> {formatCRC(totalSinpe)}
             </p>
           </div>
 

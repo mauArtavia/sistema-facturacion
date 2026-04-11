@@ -5,24 +5,22 @@
   "author": "mArtavia.dev | Mauricio Artavia Monge",
   "license": "UNLICENSED",
   "private": true,
-
   "main": "src/index.js",
-
   "scripts": {
     "dev": "nodemon src/index.js",
     "start": "node src/index.js"
   },
-
   "dependencies": {
+    "@prisma/adapter-better-sqlite3": "^7.7.0",
+    "@prisma/client": "^5.22.0",
     "cors": "^2.8.6",
     "dotenv": "^17.3.1",
-    "express": "^4.22.1"
+    "express": "^4.22.1",
+    "prisma": "^5.22.0"
   },
-
   "devDependencies": {
     "nodemon": "^3.1.14"
   },
-
   "engines": {
     "node": ">=22"
   }

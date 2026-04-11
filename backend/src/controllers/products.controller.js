@@ -6,50 +6,113 @@
  * Year: 2026
  *
  * Description:
- * Handles product creation and listing for POS system.
- * Data is stored in memory (temporary), will reset on server restart.
- * Now uses sharedData from sales.controller.js for consistency.
+ * Handles product creation and listing for the POS system.
+ *
+ * This version uses Prisma ORM connected to a SQLite database,
+ * replacing the previous in-memory storage (sharedData).
+ *
+ * Responsibilities:
+ * - Validate incoming data
+ * - Interact with database through Prisma
+ * - Return structured HTTP responses
+ *
+ * Improvements over previous version:
+ * - Persistent storage (data no longer resets)
+ * - Cleaner architecture (no shared state between controllers)
+ * - Scalable foundation for future features (reports, filters, etc.)
+ *
+ * Future improvements:
+ * - Add DTO/schema validation (Zod or Joi)
+ * - Add pagination for product listing
+ * - Add update/delete endpoints
  *
  * © 2026 mArtavia.dev — All rights reserved.
  * ============================================
  */
 
-// Import sharedData from sales.controller.js
-const { sharedData } = require("./sales.controller");
+const prisma = require("../config/prisma");
 
 /**
- * Create a new product
- * POST /products
- * Body: { name: string, price: number }
+ * ============================================
+ * CREATE PRODUCT
+ * ============================================
+ * @route   POST /products
+ * @desc    Create a new product
+ * @access  Public
+ * @body    { name: string, price: number }
  */
-const createProduct = (req, res) => {
-  const { name, price } = req.body;
+const createProduct = async (req, res) => {
+  try {
+    const { name, price } = req.body;
 
-  if (!name || price === undefined) {
-    return res.status(400).json({ message: "Name and price are required" });
+    // Basic validation
+    if (!name || price === undefined) {
+      return res.status(400).json({
+        message: "Name and price are required"
+      });
+    }
+
+    const parsedPrice = Number(price);
+
+    if (isNaN(parsedPrice) || parsedPrice <= 0) {
+      return res.status(400).json({
+        message: "Price must be greater than 0"
+      });
+    }
+
+    // Create product in database
+    const newProduct = await prisma.product.create({
+      data: {
+        name,
+        price: parsedPrice
+      }
+    });
+
+    console.log("Product created:", newProduct);
+
+    return res.status(201).json(newProduct);
+
+  } catch (error) {
+    console.error("Error creating product:", error);
+
+    return res.status(500).json({
+      message: "Error creating product"
+    });
   }
-
-  const newProduct = {
-    id: Date.now(),
-    name,
-    price: Number(price),
-    createdAt: new Date()
-  };
-
-  sharedData.products.push(newProduct);
-  console.log("Product created:", newProduct);
-
-  res.status(201).json(newProduct);
 };
 
 /**
- * Get all products
- * GET /products
+ * ============================================
+ * GET PRODUCTS
+ * ============================================
+ * @route   GET /products
+ * @desc    Retrieve all products
+ * @access  Public
  */
-const getProducts = (req, res) => {
-  res.json(sharedData.products);
+const getProducts = async (req, res) => {
+  try {
+    const products = await prisma.product.findMany({
+      orderBy: {
+        createdAt: "desc"
+      }
+    });
+
+    return res.json(products);
+
+  } catch (error) {
+    console.error("Error fetching products:", error);
+
+    return res.status(500).json({
+      message: "Error fetching products"
+    });
+  }
 };
 
+/**
+ * ============================================
+ * MODULE EXPORTS
+ * ============================================
+ */
 module.exports = {
   createProduct,
   getProducts

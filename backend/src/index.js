@@ -1,3 +1,29 @@
+/**
+ * ============================================
+ * Main Server Entry Point - Backend Application
+ * ============================================
+ * Author: mArtavia.dev | Mauricio Artavia Monge
+ * Year: 2026
+ *
+ * Description:
+ * Initializes the Express server, configures middleware,
+ * and registers all API routes.
+ *
+ * Architecture:
+ * - Routes are separated by domain (sales, products)
+ * - Controllers handle business logic
+ * - Prisma handles database operations
+ *
+ * Features:
+ * - CORS configured for local development
+ * - JSON request parsing
+ * - Request logging middleware
+ * - Health check endpoint
+ *
+ * © 2026 mArtavia.dev — All rights reserved.
+ * ============================================
+ */
+
 const express = require("express");
 const cors = require("cors");
 
@@ -14,35 +40,41 @@ const PORT = 3000;
  * ============================================
  */
 
-// Request Logger
+/**
+ * Request Logger Middleware
+ * Logs every incoming request (method + endpoint)
+ */
 app.use((req, res, next) => {
-  console.log(`Incoming Request: ${req.method} ${req.url}`);
+  console.log(`➡️ ${req.method} ${req.url}`);
   next();
 });
 
-// Enable CORS: permitir cualquier puerto en localhost o 127.0.0.1
+/**
+ * CORS Configuration
+ * Allows requests from localhost environments
+ */
 app.use(cors({
-  origin: function(origin, callback) {
-    // permitir requests sin origin (Postman, curl, etc.)
+  origin: function (origin, callback) {
     if (!origin) return callback(null, true);
 
-    // permitir localhost y 127.0.0.1 con cualquier puerto
     if (/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)) {
       return callback(null, true);
     }
 
-    // bloquear otros orígenes
-    const msg = `CORS no permite este origen: ${origin}`;
-    return callback(new Error(msg), false);
+    return callback(new Error(`CORS blocked origin: ${origin}`));
   },
   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization"]
 }));
 
-// JSON Parser
+/**
+ * Parse JSON bodies
+ */
 app.use(express.json());
 
-// Handle preflight requests
+/**
+ * Handle preflight requests
+ */
 app.options("*", cors());
 
 /**
@@ -51,15 +83,24 @@ app.options("*", cors());
  * ============================================
  */
 
-// Health Check
+/**
+ * Health Check
+ * GET /ping
+ */
 app.get("/ping", (req, res) => {
   res.json({ message: "pong" });
 });
 
-// Sales routes
+/**
+ * Sales Routes
+ * Base path: /sales
+ */
 app.use("/sales", salesRoutes);
 
-// Products routes
+/**
+ * Products Routes
+ * Base path: /products
+ */
 app.use("/products", productsRoutes);
 
 /**
@@ -69,5 +110,5 @@ app.use("/products", productsRoutes);
  */
 
 app.listen(PORT, "0.0.0.0", () => {
-  console.log(`Server running on http://127.0.0.1:${PORT}`);
+  console.log(`🔥 Server running on http://127.0.0.1:${PORT}`);
 });
