@@ -25,7 +25,7 @@
  * ============================================
  */
 
-import SalesPage from "./pages/SalesPage";
+import SalesPage from "./pages/sales/SalesPage";
 
 /**
  * Root Application Component
