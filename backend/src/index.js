@@ -30,7 +30,8 @@ const cors = require("cors");
 // Import routes
 const salesRoutes = require("./routes/sales.routes");
 const productsRoutes = require("./routes/products.routes");
-const reportsRoutes = require("./routes/reports.routes")
+const reportsRoutes = require("./routes/reports.routes");
+const categoryRoutes = require("./routes/categories.routes");
 
 const app = express();
 const PORT = 3000;
@@ -105,6 +106,8 @@ app.use("/sales", salesRoutes);
 app.use("/products", productsRoutes);
 
 app.use("/reports", reportsRoutes);
+
+app.use("/categories", categoryRoutes);
 
 /**
  * ============================================

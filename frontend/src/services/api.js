@@ -36,7 +36,9 @@
 import axios from "axios";
 
 /**
- * Create Axios instance
+ * ========================
+ * AXIOS INSTANCE
+ * ========================
  */
 const API = axios.create({
   baseURL: "http://127.0.0.1:3000"
@@ -44,55 +46,43 @@ const API = axios.create({
 
 /**
  * ========================
- * HELPER FUNCTIONS
+ * SALES
  * ========================
  */
-
-// ========================
-// SALES
-// ========================
 API.getSales = () => API.get("/sales");
 API.createSale = (data) => API.post("/sales", data);
 
-// ========================
-// PRODUCTS
-// ========================
+/**
+ * ========================
+ * PRODUCTS
+ * ========================
+ */
 API.getProducts = () => API.get("/products");
 API.createProduct = (data) => API.post("/products", data);
 
-// ========================
-// REPORTS
-// ========================
+/**
+ * ========================
+ * CATEGORIES 🔥
+ * ========================
+ */
+API.getCategories = () => API.get("/categories");
+API.createCategory = (data) => API.post("/categories", data);
 
-// 🔥 Reporte por rango (principal)
+/**
+ * ========================
+ * REPORTS
+ * ========================
+ */
 API.getReportByRange = (start, end) =>
   API.get(`/reports/range?start=${start}&end=${end}`);
 
-// Reporte diario
 API.getDailyReport = () => API.get("/reports/daily");
-
-// Reporte semanal
 API.getWeeklyReport = () => API.get("/reports/weekly");
-
-// Reporte por método de pago
 API.getReportByMethod = () => API.get("/reports/by-method");
 
 /**
- * (Optional - Future)
- * Example interceptor structure:
- *
- * API.interceptors.request.use((config) => {
- *   // Add auth token here
- *   return config;
- * });
- *
- * API.interceptors.response.use(
- *   (response) => response,
- *   (error) => {
- *     // Global error handling
- *     return Promise.reject(error);
- *   }
- * );
+ * ========================
+ * EXPORT
+ * ========================
  */
-
 export default API;

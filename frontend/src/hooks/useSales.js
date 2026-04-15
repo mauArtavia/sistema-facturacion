@@ -15,6 +15,12 @@ export default function useSales() {
 
     try {
       const res = await API.getSales();
+
+      // 🔥 defensivo
+      if (!res || !res.data) {
+        throw new Error("Respuesta inválida del servidor");
+      }
+
       setSales(res.data);
     } catch (err) {
       console.error("Error fetching sales:", err);
@@ -41,14 +47,28 @@ export default function useSales() {
     try {
       const res = await API.createSale(data);
 
-      // 🔥 update optimista del estado
-      setSales((prev) => [...prev, res.data]);
+      // 🔥 VALIDACIÓN REAL (esto es lo importante)
+      if (!res || !res.data) {
+        throw new Error("Respuesta inválida al crear venta");
+      }
 
-      return res.data; // importante para la UI
+      const newSale = res.data;
+
+      // 🔥 UPDATE OPTIMISTA + ORDENADO
+      setSales((prev) =>
+        [newSale, ...prev].sort(
+          (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
+        )
+      );
+
+      return newSale;
     } catch (err) {
       console.error("Error creating sale:", err);
-      setError("Error creando venta");
-      throw err;
+
+      // 🔥 importante: mensaje más claro
+      setError(err?.message || "Error creando venta");
+
+      throw err; // 👈 esto mantiene el control en el frontend
     } finally {
       setLoading(false);
     }
@@ -59,10 +79,11 @@ export default function useSales() {
   // ========================
   return {
     sales,
-    setSales, // 👈 lo dejamos porque lo estás usando en SalesPage
+    setSales,
     loading,
     error,
     fetchSales,
-    createSale
+    createSale,
+    refetchSales: fetchSales // 🔥 alias limpio
   };
 }

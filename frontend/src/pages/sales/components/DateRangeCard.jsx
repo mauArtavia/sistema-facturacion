@@ -10,13 +10,21 @@ function DateRangeCard({
 }) {
   return (
     <>
+      {/* RANGO */}
       <div style={styles.card}>
         <h2>Rango</h2>
 
+        {/* 🔥 BOTONES BONITOS */}
         <div style={styles.presetContainer}>
-          <button onClick={() => applyPreset("today")} style={styles.presetButton}>Hoy</button>
-          <button onClick={() => applyPreset("week")} style={styles.presetButton}>Semana</button>
-          <button onClick={() => applyPreset("month")} style={styles.presetButton}>Mes</button>
+          <button style={styles.presetButton} onClick={() => applyPreset("today")}>
+            Hoy
+          </button>
+          <button style={styles.presetButton} onClick={() => applyPreset("week")}>
+            Semana
+          </button>
+          <button style={styles.presetButton} onClick={() => applyPreset("month")}>
+            Mes
+          </button>
         </div>
 
         <input
@@ -34,12 +42,38 @@ function DateRangeCard({
         />
       </div>
 
+      {/* RESUMEN */}
       <div style={styles.card}>
         <h2>Resumen</h2>
-        <p>Total: {formatCRC(report.total)}</p>
-        <p>Efectivo: {formatCRC(report.totalCash)}</p>
-        <p>Tarjeta: {formatCRC(report.totalCard)}</p>
-        <p>SINPE: {formatCRC(report.totalSinpe)}</p>
+
+        {/* 🔥 RESUMEN PRO */}
+        <div style={{ marginTop: "15px" }}>
+          <div style={{ fontWeight: "bold", fontSize: "16px" }}>
+            Total: {formatCRC(report.total || 0)}
+          </div>
+
+          <div style={{ fontSize: "13px", color: "#666" }}>
+            Ventas: {report.count || 0}
+          </div>
+        </div>
+
+        {/* 🔥 MINI CARDS */}
+        <div style={{ display: "flex", gap: "10px", marginTop: "15px" }}>
+          <div style={{ flex: 1, ...styles.miniCard }}>
+            <div>Efectivo</div>
+            <strong>{formatCRC(report.totalCash || 0)}</strong>
+          </div>
+
+          <div style={{ flex: 1, ...styles.miniCard }}>
+            <div>Tarjeta</div>
+            <strong>{formatCRC(report.totalCard || 0)}</strong>
+          </div>
+
+          <div style={{ flex: 1, ...styles.miniCard }}>
+            <div>SINPE</div>
+            <strong>{formatCRC(report.totalSinpe || 0)}</strong>
+          </div>
+        </div>
       </div>
     </>
   );

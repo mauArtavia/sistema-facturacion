@@ -1,6 +1,8 @@
 function Toast({ toast }) {
   if (!toast) return null;
 
+  const isError = toast.type?.toLowerCase() === "error";
+
   return (
     <div
       style={{
@@ -9,7 +11,7 @@ function Toast({ toast }) {
         right: "20px",
         padding: "12px 16px",
         borderRadius: "6px",
-        backgroundColor: toast.type === "Error" ? "#dc2626" : "#16a34a",
+        backgroundColor: isError ? "#dc2626" : "#16a34a",
         color: "white",
         fontWeight: "bold",
         zIndex: 9999

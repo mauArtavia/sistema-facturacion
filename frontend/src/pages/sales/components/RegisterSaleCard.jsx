@@ -12,6 +12,9 @@ function RegisterSaleCard({
   styles,
   formatCRC
 }) {
+  // 🔥 VALIDACIÓN
+  const isValid = amount && Number(amount) > 0;
+
   return (
     <div style={styles.card}>
       <select
@@ -45,12 +48,17 @@ function RegisterSaleCard({
         <option value="sinpe">SINPE</option>
       </select>
 
+      {/* 🔥 BOTÓN MEJORADO + VALIDACIÓN */}
       <button
         onClick={handleRegister}
-        disabled={loading}
-        style={styles.button}
+        disabled={loading || !isValid}
+        style={{
+          ...styles.button,
+          opacity: loading || !isValid ? 0.6 : 1,
+          cursor: loading || !isValid ? "not-allowed" : "pointer"
+        }}
       >
-        {loading ? "Registrando..." : "Registrar"}
+        {loading ? "Registrando..." : "Registrar Venta"}
       </button>
     </div>
   );
