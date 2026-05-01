@@ -16,7 +16,7 @@ function SalesPage() {
       {/* 🔥 LAYOUT PRINCIPAL */}
       <div style={styles.layout}>
         
-        {/* 🔹 SIDEBAR */}
+        {/* SIDEBAR */}
         <div style={styles.sidebar}>
           <button
             style={styles.sidebarButton(tab === "pos")}
@@ -40,7 +40,7 @@ function SalesPage() {
           </button>
         </div>
 
-        {/* 🔹 CONTENIDO */}
+        {/* CONTENIDO */}
         <div style={styles.content}>
           {tab === "pos" && <POSPage />}
           {tab === "history" && <HistoryPage />}

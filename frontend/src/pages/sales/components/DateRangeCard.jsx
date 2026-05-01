@@ -1,3 +1,46 @@
+/**
+ * DateRangeCard
+ *
+ * Componente de control y visualización de reportes de ventas por rango de fechas.
+ *
+ * Funciona como combinación de:
+ * 1. Selector de rango de fechas (preset + manual)
+ * 2. Panel de resumen de ventas
+ *
+ * FUNCIONALIDAD:
+ *
+ * Control de fechas:
+ * - Permite seleccionar rango mediante presets:
+ *   - today (hoy)
+ *   - week (semana actual)
+ *   - month (mes actual)
+ *
+ * - Permite selección manual mediante inputs tipo date.
+ *
+ * Resumen de ventas:
+ * - Muestra el total general de ventas en el rango.
+ * - Muestra la cantidad total de ventas realizadas.
+ * - Desglosa ventas por método de pago:
+ *   - efectivo (cash)
+ *   - tarjeta (card)
+ *   - SINPE
+ *
+ * PROPS:
+ * - startDate: string (fecha inicio)
+ * - endDate: string (fecha fin)
+ * - setStartDate: function
+ * - setEndDate: function
+ * - applyPreset: function (maneja presets de rango)
+ * - report: object (datos agregados de ventas)
+ * - styles: objeto de estilos globales
+ * - formatCRC: function (formateo de moneda)
+ *
+ * RESPONSABILIDAD:
+ * - UI de filtros de tiempo
+ * - Visualización de métricas
+ * - NO contiene lógica de negocio ni API directa
+ */
+
 function DateRangeCard({
   startDate,
   endDate,

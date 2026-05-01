@@ -10,14 +10,11 @@ const prisma = require("../config/prisma");
  * ============================================
  * CREATE PRODUCT
  * ============================================
- * @route   POST /products
- * @body    { name: string, price: number, categoryId?: number }
  */
 const createProduct = async (req, res) => {
   try {
     const { name, price, categoryId } = req.body;
 
-    // 🔍 VALIDACIONES
     if (!name || price === undefined) {
       return res.status(400).json({
         message: "Name and price are required"
@@ -32,7 +29,7 @@ const createProduct = async (req, res) => {
       });
     }
 
-    // 🔥 VALIDAR CATEGORÍA (si viene)
+    // validar categoría
     if (categoryId) {
       const categoryExists = await prisma.category.findUnique({
         where: { id: Number(categoryId) }
@@ -45,19 +42,16 @@ const createProduct = async (req, res) => {
       }
     }
 
-    // ✅ CREAR PRODUCTO
     const newProduct = await prisma.product.create({
       data: {
-        name,
+        name: name.trim(),
         price: parsedPrice,
         categoryId: categoryId ? Number(categoryId) : null
       },
       include: {
-        category: true // 🔥 importante
+        category: true // 🔥 clave para el POS
       }
     });
-
-    console.log("Product created:", newProduct);
 
     return res.status(201).json(newProduct);
 
@@ -74,16 +68,13 @@ const createProduct = async (req, res) => {
  * ============================================
  * GET PRODUCTS
  * ============================================
- * @route   GET /products
  */
 const getProducts = async (req, res) => {
   try {
     const products = await prisma.product.findMany({
-      orderBy: {
-        createdAt: "desc"
-      },
+      orderBy: { createdAt: "desc" },
       include: {
-        category: true // 🔥 ahora devuelve categoría
+        category: true // 🔥 esto es lo que habilita categorías en frontend
       }
     });
 

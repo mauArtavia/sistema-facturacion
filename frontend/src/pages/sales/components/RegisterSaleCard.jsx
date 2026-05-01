@@ -1,3 +1,56 @@
+/**
+ * RegisterSaleCard
+ *
+ * Componente de formulario para registrar ventas manuales de forma directa.
+ *
+ * Permite seleccionar un producto o ingresar un monto personalizado,
+ * elegir el método de pago y enviar la venta al sistema.
+ *
+ * FUNCIONALIDAD:
+ *
+ * Selección de producto:
+ * - Permite elegir un producto existente desde un select.
+ * - Al seleccionar un producto, puede deshabilitar el campo de monto
+ *   si la lógica del padre así lo define.
+ *
+ * Monto manual:
+ * - Permite ingresar un monto personalizado.
+ * - Se deshabilita si hay un producto seleccionado.
+ *
+ * Método de pago:
+ * - Permite seleccionar entre:
+ *   - cash (efectivo)
+ *   - card (tarjeta)
+ *   - sinpe (SINPE móvil)
+ *
+ * Validación:
+ * - El botón de registro se habilita solo si:
+ *   - hay un monto válido mayor a 0
+ *   - no está en estado de carga
+ *
+ * Envío:
+ * - Ejecuta handleRegister al confirmar la venta.
+ *
+ * PROPS:
+ * - products: lista de productos disponibles
+ * - selectedProduct: producto seleccionado
+ * - setSelectedProduct: setter del producto
+ * - amount: monto manual
+ * - setAmount: setter del monto
+ * - method: método de pago seleccionado
+ * - setMethod: setter del método de pago
+ * - handleRegister: función para registrar la venta
+ * - handleProductChange: handler de selección de producto
+ * - loading: estado de carga del sistema
+ * - styles: objeto de estilos globales
+ * - formatCRC: función de formato de moneda
+ *
+ * RESPONSABILIDAD:
+ * - UI de registro manual de ventas
+ * - Validación básica de entrada
+ * - NO contiene lógica de persistencia ni API directa
+ */
+
 function RegisterSaleCard({
   products,
   selectedProduct,

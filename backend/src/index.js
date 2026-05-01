@@ -32,6 +32,7 @@ const salesRoutes = require("./routes/sales.routes");
 const productsRoutes = require("./routes/products.routes");
 const reportsRoutes = require("./routes/reports.routes");
 const categoryRoutes = require("./routes/categories.routes");
+const ordersRoutes = require("./routes/orders.routes");
 
 const app = express();
 const PORT = 3000;
@@ -108,6 +109,8 @@ app.use("/products", productsRoutes);
 app.use("/reports", reportsRoutes);
 
 app.use("/categories", categoryRoutes);
+
+app.use("/", ordersRoutes);
 
 /**
  * ============================================

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { groupSales } from "../../../utils/groupSales";
+import { payment } from "../../../constants/colors";
 
 function SalesHistoryCard({
   filteredSales,
@@ -15,13 +16,6 @@ function SalesHistoryCard({
 
   const toggle = (index) => {
     setOpenIndex(openIndex === index ? null : index);
-  };
-
-  // 🎨 colores por método
-  const methodColors = {
-    cash: "#16a34a",
-    card: "#2563eb",
-    sinpe: "#9333ea"
   };
 
   return (
@@ -40,26 +34,34 @@ function SalesHistoryCard({
           const first = group[0];
           const isOpen = openIndex === index;
 
-          // 🧠 agrupar productos
+          const methods = [...new Set(group.map((s) => s.method))];
+
+          const methodLabel =
+            methods.length === 1
+              ? methodLabels[methods[0]]
+              : "Mixto";
+
           const productMap = {};
 
           group.forEach((sale) => {
+            const key = sale.product?.id || sale.id;
             const name = sale.product?.name || "Producto";
 
-            if (!productMap[name]) {
-              productMap[name] = {
+            if (!productMap[key]) {
+              productMap[key] = {
+                name,
                 count: 0,
                 total: 0
               };
             }
 
-            productMap[name].count += 1;
-            productMap[name].total += sale.amount;
+            productMap[key].count += 1;
+            productMap[key].total += sale.amount;
           });
 
           return (
             <div key={index}>
-              {/* 🔥 HEADER */}
+              {/* HEADER */}
               <div
                 style={{
                   ...styles.saleItem,
@@ -84,15 +86,34 @@ function SalesHistoryCard({
                 <div style={styles.saleMetaRight}>
                   <div
                     style={{
-                      background: methodColors[first.method],
+                      background: payment[first.method],
                       color: "white",
                       padding: "2px 6px",
                       borderRadius: "4px",
                       fontSize: "11px",
-                      marginBottom: "4px"
+                      marginBottom: "4px",
+                      textTransform: "uppercase"
                     }}
                   >
                     {methodLabels[first.method]}
+
+                    <div
+                      style={{
+                        background: payment[first.method],
+                        color: "white",
+                        padding: "2px 6px",
+                        borderRadius: "4px",
+                        fontSize: "11px",
+                        marginBottom: "4px",
+                        textTransform: "uppercase"
+                      }}
+                    >
+                      {methodLabel}
+                    </div>
+
+                    <div style={{ fontSize: "11px", color: "#666" }}>
+                      Tx: {first.transactionId?.slice(0, 8)}
+                    </div>
                   </div>
 
                   <div>{formatDate(first.createdAt)}</div>
@@ -100,7 +121,7 @@ function SalesHistoryCard({
                 </div>
               </div>
 
-              {/* 🔽 DETALLE ANIMADO */}
+              {/* DETALLE */}
               <div
                 style={{
                   maxHeight: isOpen ? "300px" : "0px",

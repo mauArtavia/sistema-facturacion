@@ -1,3 +1,33 @@
+/**
+ * PieChartCard
+ *
+ * Componente de visualización simple de distribución de ventas por método de pago.
+ *
+ * Recibe un objeto "report" con la estructura:
+ *
+ * report.byMethod = {
+ *   cash: number,
+ *   card: number,
+ *   sinpe: number
+ * }
+ *
+ * Funcionalidad:
+ * - Calcula el total de ventas entre todos los métodos.
+ * - Convierte cada método en porcentaje del total.
+ * - Renderiza una barra horizontal proporcional por método.
+ *
+ * UI:
+ * - Muestra el nombre del método en mayúsculas.
+ * - Muestra el porcentaje correspondiente.
+ * - Representa visualmente el porcentaje con una barra de progreso.
+ *
+ * Caso sin datos:
+ * - Si no existe report o byMethod, muestra "Sin datos".
+ *
+ * Uso:
+ * <PieChartCard report={report} />
+ */
+
 import Card from "../ui/Card";
 
 function PieChartCard({ report }) {

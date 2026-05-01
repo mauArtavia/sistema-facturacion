@@ -107,3 +107,17 @@ POS
     ├── Filtros (Hoy, 7 días, 30 días, Rango manual)
     ├── Visualización de Datos (Tabla de ingresos / Productos más vendidos)
     └── Exportación (Botones: Descargar CSV / Descargar PDF)
+
+
+
+Colores
+
+const colors = {
+  primary: "#3D848F",     // base
+  primaryDark: "#2F6B73", // hover / activo fuerte
+  primaryLight: "#5FA6B1",// hover suave
+  primarySoft: "#A7D1D7", // fondo leve
+  border: "#2A5A60",      // bordes activos
+  textOnPrimary: "#FFFFFF",
+  textMuted: "#CCCCCC"
+};

@@ -1,215 +1,254 @@
-import { useState } from "react";
+import { useEffect, useState, useMemo } from "react";
+import API from "../../../services/api";
 import useProducts from "../../../hooks/useProducts";
-import useSales from "../../../hooks/useSales";
-import styles from "../../../styles/styles";
+import { v4 as uuidv4 } from "uuid";
+
+import POSLayout from "./components/POSLayout";
+import CategoryBar from "./components/CategoryBar";
+import ProductPanel from "./components/ProductPanel";
+import TableView from "./components/TableView";
+
+import CheckoutOverlay from "./components/CheckoutOverlay";
+import SplitAutoOverlay from "./components/SplitAutoOverlay";
+import ManualSplitOverlay from "./components/ManualSplitOverlay";
 
 function POSPage() {
   const { products } = useProducts();
-  const { createSale } = useSales();
 
   const [tables, setTables] = useState([]);
   const [activeTable, setActiveTable] = useState(null);
   const [paymentMethod, setPaymentMethod] = useState("cash");
+  const [selectedCategory, setSelectedCategory] = useState(null);
+
+  const [checkoutMode, setCheckoutMode] = useState(null);
+  const [bills, setBills] = useState([]);
+  const [currentBillIndex, setCurrentBillIndex] = useState(0);
 
   // ========================
-  // 🍽️ CREAR MESA
+  // DATA
   // ========================
-  const handleCreateTable = () => {
-    const tableNumber = prompt("Número de mesa:");
-    if (!tableNumber) return;
+  const fetchTables = async (keepActive = false) => {
+    const res = await API.get("/tables");
+    setTables(res.data);
 
-    const newTable = {
-      id: Date.now(),
-      number: tableNumber,
-      items: [],
-      total: 0
-    };
-
-    setTables((prev) => [...prev, newTable]);
+    if (keepActive && activeTable) {
+      const updated = res.data.find((t) => t.id === activeTable.id);
+      setActiveTable(updated || null);
+    }
   };
 
+  useEffect(() => {
+    fetchTables();
+  }, []);
+
+  const categories = useMemo(() => {
+    const map = new Map();
+    products.forEach((p) => {
+      if (p.category) map.set(p.category.id, p.category);
+    });
+    return Array.from(map.values());
+  }, [products]);
+
+  const filteredProducts = selectedCategory
+    ? products.filter((p) => p.categoryId === selectedCategory)
+    : [];
+
   // ========================
-  // 📂 ABRIR MESA
+  // ACTIONS
   // ========================
+  const handleCreateTable = async () => {
+    const number = prompt("Número de mesa:");
+    if (!number) return;
+
+    const res = await API.post("/tables", { number });
+    setActiveTable(res.data);
+    await fetchTables(true);
+  };
+
   const handleOpenTable = (table) => {
     setActiveTable(table);
   };
 
-  // ========================
-  // 🔙 VOLVER
-  // ========================
-  const handleBack = () => {
+  const handleBack = async () => {
     setActiveTable(null);
+    setSelectedCategory(null);
+    setCheckoutMode(null);
+    setBills([]);
+    setCurrentBillIndex(0);
+    await fetchTables();
+  };
+
+  const handleAddProduct = async (product) => {
+    if (!activeTable) return;
+
+    await API.post(`/tables/${activeTable.id}/items`, {
+      productId: product.id,
+    });
+
+    await fetchTables(true);
   };
 
   // ========================
-  // ➕ AGREGAR PRODUCTO
+  // CHECKOUT SIMPLE
   // ========================
-  const handleAddProduct = (product) => {
-    const updatedTable = {
-      ...activeTable,
-      items: [...activeTable.items, product],
-      total: activeTable.total + product.price
-    };
+  const handleCheckoutSingle = async () => {
+    await API.post(`/tables/${activeTable.id}/checkout`, {
+      method: paymentMethod,
+    });
 
-    setActiveTable(updatedTable);
-
-    setTables((prev) =>
-      prev.map((t) => (t.id === updatedTable.id ? updatedTable : t))
-    );
+    await handleBack();
   };
 
   // ========================
-  // 💰 COBRAR
+  // SPLIT AUTOMÁTICO (FIXED)
   // ========================
-  const handleCheckout = async () => {
-    if (!activeTable || activeTable.items.length === 0) return;
+  const handleSplitAutomatic = () => {
+    const count = Number(prompt("Cantidad de cuentas"));
+    if (!count || count <= 0) return;
 
-    try {
-      await Promise.all(
-        activeTable.items.map((item) =>
-          createSale({
-            amount: item.price,
-            method: paymentMethod,
-            productId: item.id
-          })
-        )
-      );
+    const unpaidSales = activeTable?.sales?.filter(
+      (s) => !s.transactionId
+    ) || [];
 
-      // 🔥 eliminar mesa (cerrar)
-      setTables((prev) =>
-        prev.filter((t) => t.id !== activeTable.id)
-      );
-
-      setActiveTable(null);
-      setPaymentMethod("cash");
-
-    } catch (error) {
-      console.error("Error cobrando:", error);
+    if (unpaidSales.length === 0) {
+      alert("No hay productos para dividir");
+      return;
     }
+
+    const chunkSize = Math.ceil(unpaidSales.length / count);
+
+    const newBills = Array.from({ length: count }).map((_, i) => {
+      const start = i * chunkSize;
+      const slice = unpaidSales.slice(start, start + chunkSize);
+
+      const total = slice.reduce(
+        (acc, s) => acc + (s.amount || 0),
+        0
+      );
+
+      return {
+        id: uuidv4(),
+        name: `Cuenta ${i + 1}`,
+        total,
+        paid: false,
+        salesIds: slice.map((s) => s.id),
+      };
+    });
+
+    setBills(newBills);
+    setCheckoutMode("split-auto");
   };
 
   // ========================
-  // 🧾 VISTA: MESA ABIERTA
+  // PAGAR CUENTA (FIXED LOGIC)
   // ========================
-  if (activeTable) {
-    return (
-      <div style={styles.column}>
-        {/* 🔙 VOLVER */}
-        <button style={styles.button} onClick={handleBack}>
-          ← Volver
-        </button>
+  const handlePayBill = async (index) => {
+    try {
+      const bill = bills[index];
 
-        {/* 🧃 PRODUCTOS */}
-        <div style={styles.card}>
-          <h3>Agregar producto</h3>
+      if (!bill || bill.paid) return;
 
-          <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-            {products.map((p) => (
-              <button
-                key={p.id}
-                style={styles.presetButton}
-                onClick={() => handleAddProduct(p)}
-              >
-                {p.name} | ₡{p.price}
-              </button>
-            ))}
-          </div>
-        </div>
+      if (!bill.salesIds || bill.salesIds.length === 0) {
+        alert("Esta cuenta no tiene items asignados");
+        return;
+      }
 
-        {/* 🧾 RESUMEN MESA */}
-        <div style={styles.card}>
-          <h2>Mesa #{activeTable.number}</h2>
+      await API.post(`/tables/${activeTable.id}/checkout`, {
+        method: paymentMethod,
+        salesIds: bill.salesIds,
+      });
 
-          <div style={{ marginTop: "15px" }}>
-            {activeTable.items.length === 0 && (
-              <div style={{ color: "#888" }}>
-                No hay productos agregados
-              </div>
-            )}
+      setBills((prev) =>
+        prev.map((b, i) => (i === index ? { ...b, paid: true } : b))
+      );
 
-            {activeTable.items.map((item, i) => (
-              <div key={i} style={styles.saleItem}>
-                <div>{item.name}</div>
-                <div>₡{item.price}</div>
-              </div>
-            ))}
-          </div>
+      await fetchTables(true);
+    } catch (err) {
+      console.error(err);
 
-          <div style={{ marginTop: "15px", fontWeight: "bold" }}>
-            Total: ₡{activeTable.total}
-          </div>
+      alert(err?.response?.data?.message || "Error al cobrar cuenta");
+    }
 
-          {/* 💳 MÉTODO DE PAGO */}
-          <div style={{ marginTop: "15px" }}>
-            <select
-              value={paymentMethod}
-              onChange={(e) => setPaymentMethod(e.target.value)}
-              style={styles.select}
-            >
-              <option value="cash">Efectivo</option>
-              <option value="card">Tarjeta</option>
-              <option value="sinpe">SINPE</option>
-            </select>
-
-            <button
-              style={styles.button}
-              onClick={handleCheckout}
-              disabled={activeTable.items.length === 0}
-            >
-              💰 Cobrar
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
+    console.log("PAY BILL:", bills);
+  };
 
   // ========================
-  // 🧾 VISTA: LISTA DE MESAS
+  // FINALIZAR SPLIT
+  // ========================
+  const handleFinishSplit = async () => {
+    const unpaid = bills.some((b) => !b.paid);
+
+    if (unpaid) {
+      alert("Faltan cuentas por pagar");
+      return;
+    }
+
+    await handleBack();
+  };
+
+  // ========================
+  // UI
   // ========================
   return (
-    <div style={styles.column}>
-      {/* 🔥 ACCIONES */}
-      <div style={{ display: "flex", gap: "10px" }}>
-        <button style={styles.button} onClick={handleCreateTable}>
-          + Nueva Mesa
-        </button>
+    <POSLayout
+      tables={tables}
+      activeTable={activeTable}
+      onCreateTable={handleCreateTable}
+      onOpenTable={handleOpenTable}
+      onBack={handleBack}
+    >
+      {activeTable && (
+        <>
+          <CategoryBar
+            categories={categories}
+            selected={selectedCategory}
+            onSelect={setSelectedCategory}
+          />
 
-        <button style={styles.button} disabled>
-          ⚡ Venta Rápida
-        </button>
-      </div>
+          <ProductPanel
+            products={filteredProducts}
+            onAdd={handleAddProduct}
+          />
 
-      {/* 🍽️ MESAS */}
-      <div style={styles.card}>
-        <h3 style={{ marginBottom: "10px" }}>Mesas abiertas</h3>
+          <TableView
+            table={activeTable}
+            paymentMethod={paymentMethod}
+            setPaymentMethod={setPaymentMethod}
+            onCheckout={() => setCheckoutMode("select")}
+          />
+        </>
+      )}
 
-        {tables.length === 0 && (
-          <div style={{ color: "#888", textAlign: "center" }}>
-            No hay mesas abiertas
-          </div>
-        )}
+      {checkoutMode === "select" && (
+        <CheckoutOverlay
+          onClose={() => setCheckoutMode(null)}
+          onSingle={handleCheckoutSingle}
+          onAuto={handleSplitAutomatic}
+          onManual={() => setCheckoutMode("manual")}
+        />
+      )}
 
-        {tables.map((table) => (
-          <div key={table.id} style={styles.saleItem}>
-            <div>
-              <strong>Mesa #{table.number}</strong>
-              <div style={styles.saleMeta}>
-                Total: ₡{table.total}
-              </div>
-            </div>
+      {checkoutMode === "split-auto" && (
+        <SplitAutoOverlay
+          bills={bills}
+          onPay={handlePayBill}
+          onFinish={handleFinishSplit}
+          onClose={() => setCheckoutMode(null)}
+        />
+      )}
 
-            <button
-              style={styles.presetButton}
-              onClick={() => handleOpenTable(table)}
-            >
-              Abrir
-            </button>
-          </div>
-        ))}
-      </div>
-    </div>
+      {checkoutMode === "manual" && (
+        <ManualSplitOverlay
+          bills={bills}
+          setBills={setBills}
+          currentBillIndex={currentBillIndex}
+          setCurrentBillIndex={setCurrentBillIndex}
+          sales={activeTable?.sales}
+          onFinish={handleFinishSplit}
+          onClose={() => setCheckoutMode(null)}
+        />
+      )}
+    </POSLayout>
   );
 }
 

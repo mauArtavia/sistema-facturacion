@@ -82,6 +82,23 @@ API.getReportByMethod = () => API.get("/reports/by-method");
 
 /**
  * ========================
+ * TABLES / ORDERS
+ * ========================
+ */
+
+API.getTables = () => API.get("/tables");
+API.createTable = (data) => API.post("/tables", data);
+API.addItemToTable = (tableId, data) =>
+  API.post(`/tables/${tableId}/items`, data);
+
+API.checkoutTable = (tableId, method) =>
+  API.post(`/tables/${tableId}/checkout`, { method });
+
+API.quickSale = (data) =>
+  API.post("/orders/quick", data);
+
+/**
+ * ========================
  * EXPORT
  * ========================
  */

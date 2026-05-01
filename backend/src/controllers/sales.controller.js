@@ -1,58 +1,13 @@
-/**
- * ============================================
- * Sales Controller - Backend Module
- * ============================================
- * Author: mArtavia.dev | Mauricio Artavia Monge
- * Year: 2026
- *
- * Description:
- * Handles all operations related to sales in the POS system.
- *
- * This controller uses Prisma ORM connected to a SQLite database,
- * replacing the previous in-memory storage approach.
- *
- * Responsibilities:
- * - Validate incoming sale data
- * - Link sales optionally to products
- * - Persist sales in the database
- * - Retrieve sales with associated product information
- *
- * Key Features:
- * - Supports sales with or without linked products
- * - Automatically includes product data in responses
- * - Ensures data integrity through validation
- *
- * Improvements over previous version:
- * - Persistent storage (sales survive server restarts)
- * - Relational data (sales ↔ products)
- * - Scalable query structure for reports and filters
- *
- * Future improvements:
- * - Add filters (date range, method)
- * - Add aggregations (daily, weekly reports)
- * - Add pagination for large datasets
- * - Add DTO/schema validation (Zod or Joi)
- *
- * © 2026 mArtavia.dev — All rights reserved.
- * ============================================
- */
-
 const prisma = require("../config/prisma");
+const { v4: uuidv4 } = require("uuid");
 
 /**
- * ============================================
  * CREATE SALE
- * ============================================
- * @route   POST /sales
- * @desc    Create a new sale
- * @access  Public
- * @body    { amount: number, method: string, productId?: number }
  */
 const createSale = async (req, res) => {
   try {
-    const { amount, method, productId } = req.body;
+    const { amount, method, productId, transactionId } = req.body;
 
-    // Basic validation
     if (amount === undefined || !method) {
       return res.status(400).json({
         message: "Amount and method are required"
@@ -69,9 +24,6 @@ const createSale = async (req, res) => {
 
     let product = null;
 
-    /**
-     * Validate and fetch product if productId is provided
-     */
     if (productId) {
       const pid = Number(productId);
 
@@ -88,21 +40,31 @@ const createSale = async (req, res) => {
       }
     }
 
-    /**
-     * Create sale in database
-     */
+    const txId = transactionId || uuidv4();
+
+    // 🔥 DUPLICATE CHECK (CORRECTO)
+    const existingSale = await prisma.sale.findUnique({
+      where: { transactionId: txId }
+    });
+
+    if (existingSale) {
+      return res.status(409).json({
+        message: "Duplicate transaction",
+        sale: existingSale
+      });
+    }
+
     const newSale = await prisma.sale.create({
       data: {
         amount: parsedAmount,
         method,
-        productId: product ? product.id : null
+        productId: product ? product.id : null,
+        transactionId: txId
       },
       include: {
         product: true
       }
     });
-
-    console.log("Sale created:", newSale);
 
     return res.status(201).json(newSale);
 
@@ -116,22 +78,13 @@ const createSale = async (req, res) => {
 };
 
 /**
- * ============================================
  * GET SALES
- * ============================================
- * @route   GET /sales
- * @desc    Retrieve all sales with product info
- * @access  Public
  */
 const getSales = async (req, res) => {
   try {
     const sales = await prisma.sale.findMany({
-      include: {
-        product: true
-      },
-      orderBy: {
-        createdAt: "desc"
-      }
+      include: { product: true },
+      orderBy: { createdAt: "desc" }
     });
 
     return res.json(sales);
@@ -145,11 +98,6 @@ const getSales = async (req, res) => {
   }
 };
 
-/**
- * ============================================
- * MODULE EXPORTS
- * ============================================
- */
 module.exports = {
   createSale,
   getSales

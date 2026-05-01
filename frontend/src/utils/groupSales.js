@@ -1,29 +1,17 @@
 export function groupSales(sales) {
-  const grouped = [];
+  const groups = new Map();
 
-  const sorted = [...sales].sort(
-    (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
-  );
+  sales.forEach((sale) => {
+    if (!sale.transactionId) return;
 
-  let currentGroup = [];
-  let lastTime = null;
-
-  sorted.forEach((sale) => {
-    const saleTime = new Date(sale.createdAt).getTime();
-
-    if (!lastTime || Math.abs(lastTime - saleTime) <= 3000) {
-      currentGroup.push(sale);
-    } else {
-      grouped.push(currentGroup);
-      currentGroup = [sale];
+    if (!groups.has(sale.transactionId)) {
+      groups.set(sale.transactionId, []);
     }
 
-    lastTime = saleTime;
+    groups.get(sale.transactionId).push(sale);
   });
 
-  if (currentGroup.length) {
-    grouped.push(currentGroup);
-  }
-
-  return grouped;
+  return Array.from(groups.values()).sort((a, b) => {
+    return new Date(b[0].createdAt) - new Date(a[0].createdAt);
+  });
 }

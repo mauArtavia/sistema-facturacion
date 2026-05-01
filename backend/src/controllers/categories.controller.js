@@ -7,24 +7,29 @@
 const prisma = require("../config/prisma");
 
 /**
- * ============================================
+ * 🔧 NORMALIZE NAME
+ */
+const normalizeCategoryName = (name) => {
+  return name.trim().toLowerCase();
+};
+
+/**
  * CREATE CATEGORY
- * ============================================
- * @route POST /categories
  */
 const createCategory = async (req, res) => {
   try {
     const { name } = req.body;
 
-    if (!name) {
+    if (!name || !name.trim()) {
       return res.status(400).json({
         message: "Category name is required"
       });
     }
 
-    // 🔥 evitar duplicados
-    const existing = await prisma.category.findUnique({
-      where: { name }
+    const formattedName = normalizeCategoryName(name);
+
+    const existing = await prisma.category.findFirst({
+      where: { name: formattedName }
     });
 
     if (existing) {
@@ -34,13 +39,15 @@ const createCategory = async (req, res) => {
     }
 
     const category = await prisma.category.create({
-      data: { name }
+      data: { name: formattedName }
     });
 
     return res.status(201).json(category);
 
   } catch (error) {
-    console.error("Error creating category:", error);
+    console.error("🔥 FULL ERROR:", error);
+    console.error("🔥 MESSAGE:", error.message);
+    console.error("🔥 STACK:", error.stack);
 
     return res.status(500).json({
       message: "Error creating category"
@@ -49,17 +56,12 @@ const createCategory = async (req, res) => {
 };
 
 /**
- * ============================================
  * GET CATEGORIES
- * ============================================
- * @route GET /categories
  */
 const getCategories = async (req, res) => {
   try {
     const categories = await prisma.category.findMany({
-      orderBy: {
-        name: "asc"
-      }
+      orderBy: { name: "asc" }
     });
 
     return res.json(categories);

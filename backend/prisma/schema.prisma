@@ -11,9 +11,11 @@ model Product {
   id          Int       @id @default(autoincrement())
   name        String
   price       Float
-  createdAt   DateTime  @default(now())
 
-  // 🔥 nueva relación
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  // Categoría
   categoryId  Int?
   category    Category? @relation(fields: [categoryId], references: [id])
 
@@ -23,7 +25,9 @@ model Product {
 model Category {
   id        Int       @id @default(autoincrement())
   name      String    @unique
+
   createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
 
   products  Product[]
 }
@@ -41,16 +45,19 @@ model Table {
 }
 
 model Sale {
-  id        Int      @id @default(autoincrement())
-  amount    Float
-  method    String
-  createdAt DateTime @default(now())
+  id            Int      @id @default(autoincrement())
+  amount        Float
+  method        String
 
-  // 🔥 producto
-  productId Int?
-  product   Product? @relation(fields: [productId], references: [id])
+  transactionId String?
+  billID        String?
 
-  // 🔥 mesa (nuevo)
-  tableId   Int?
-  table     Table?   @relation(fields: [tableId], references: [id])
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  productId     Int?
+  product       Product? @relation(fields: [productId], references: [id])
+
+  tableId       Int?
+  table         Table?   @relation(fields: [tableId], references: [id])
 }

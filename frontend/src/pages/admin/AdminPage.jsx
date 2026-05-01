@@ -12,6 +12,15 @@ function AdminPage() {
   const [selectedCategory, setSelectedCategory] = useState("");
 
   // ========================
+  // 🎨 FORMAT DISPLAY
+  // ========================
+  const formatDisplay = (text) => {
+    return text
+      .toLowerCase()
+      .replace(/\b\w/g, (l) => l.toUpperCase());
+  };
+
+  // ========================
   // 📦 LOAD CATEGORIES
   // ========================
   const fetchCategories = async () => {
@@ -38,7 +47,7 @@ function AdminPage() {
       await API.createCategory({ name: categoryName.trim() });
 
       setCategoryName("");
-      await fetchCategories(); // 🔥 asegurar sync real
+      await fetchCategories();
     } catch (err) {
       console.error("Error creating category:", err);
     }
@@ -101,7 +110,7 @@ function AdminPage() {
 
             {categories.map((c) => (
               <div key={c.id} style={styles.saleItem}>
-                {c.name}
+                {formatDisplay(c.name)}
               </div>
             ))}
           </div>
@@ -137,7 +146,7 @@ function AdminPage() {
 
             {categories.map((c) => (
               <option key={c.id} value={c.id}>
-                {c.name}
+                {formatDisplay(c.name)}
               </option>
             ))}
           </select>
