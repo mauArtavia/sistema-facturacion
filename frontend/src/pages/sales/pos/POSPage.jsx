@@ -1,26 +1,32 @@
 import { useEffect, useState, useMemo } from "react";
-import API from "../../../services/api";
-import useProducts from "../../../hooks/useProducts";
-
-import styles from "../../../styles/styles";
+import API from "@/services/api";
+import useProducts from "@/hooks/useProducts";
+import styles from "@/styles/styles";
 
 import POSLayout from "./components/POSLayout";
 import CategoryBar from "./components/CategoryBar";
 import ProductPanel from "./components/ProductPanel";
 import TableView from "./components/TableView";
 import CheckoutOverlay from "./components/CheckoutOverlay";
+import Toast from "@/components/common/Toast";
+import CreateTableCard from "./components/CreateTableCard";
 
 function POSPage() {
   const { products } = useProducts();
 
   const [tables, setTables] = useState([]);
   const [activeTable, setActiveTable] = useState(null);
-  const [paymentMethod, setPaymentMethod] = useState("cash");
   const [selectedCategory, setSelectedCategory] = useState(null);
-  const [checkoutMode, setCheckoutMode] = useState(null);
-  const [splitCount, setSplitCount] = useState(0);
-  const [splitPaidCount, setSplitPaidCount] = useState(0);
 
+  const [checkoutStep, setCheckoutStep] = useState(null);
+  const [paymentMethod, setPaymentMethod] = useState("cash");
+
+  const [toast, setToast] = useState(null);
+  const [newTableNumber, setNewTableNumber] = useState("");
+
+  // ========================
+  // FETCH TABLES
+  // ========================
   const fetchTables = async (keepActive = false) => {
     const res = await API.get("/tables");
     setTables(res.data);
@@ -35,6 +41,17 @@ function POSPage() {
     fetchTables();
   }, []);
 
+  // ========================
+  // TOAST
+  // ========================
+  const showToast = (message, type = "success") => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 3000);
+  };
+
+  // ========================
+  // CATEGORIES
+  // ========================
   const categories = useMemo(() => {
     const map = new Map();
     products.forEach((p) => {
@@ -47,146 +64,136 @@ function POSPage() {
     ? products.filter((p) => p.categoryId === selectedCategory)
     : [];
 
+  // ========================
+  // CREATE TABLE
+  // ========================
   const handleCreateTable = async () => {
-    const number = prompt("Número de mesa:");
-    if (!number) return;
+    if (!newTableNumber) {
+      showToast("Ingrese número de mesa", "error");
+      return;
+    }
 
-    const res = await API.post("/tables", { number });
-    setActiveTable(res.data);
-    await fetchTables(true);
+    try {
+      const res = await API.post("/tables", { number: newTableNumber });
+      setActiveTable(res.data);
+      setNewTableNumber("");
+      await fetchTables(true);
+      showToast("Mesa creada");
+    } catch (err) {
+      showToast(err?.response?.data?.message || "Error creando mesa", "error");
+    }
   };
 
-  const handleOpenTable = (table) => {
-    setActiveTable(table);
-  };
+  const handleOpenTable = (table) => setActiveTable(table);
 
   const handleBack = async () => {
     setActiveTable(null);
     setSelectedCategory(null);
-    setCheckoutMode(null);
+    setCheckoutStep(null);
     await fetchTables();
   };
 
   const handleAddProduct = async (product) => {
     if (!activeTable) return;
 
-    await API.post(`/tables/${activeTable.id}/items`, {
-      productId: product.id,
-    });
-
-    await fetchTables(true);
-  };
-
-  const handleCheckoutSingle = async () => {
-    await API.post(`/tables/${activeTable.id}/checkout`, {
-      method: paymentMethod,
-    });
-
-    await handleBack();
-  };
-
-  const handleSplitAmount = () => {
-    const count = Number(prompt("Cantidad de personas"));
-
-    if (!count || count <= 1) return;
-
-    setSplitCount(count);
-    setSplitPaidCount(0); // 👈 importante
-    setCheckoutMode("split-amount");
-  };
-
-  const handlePaySplitPart = async () => {
     try {
-      const unpaidSales = activeTable.sales.filter(
-        (s) => !s.transactionId
-      );
-
-      if (unpaidSales.length === 0) {
-        alert("Nada pendiente");
-        await handleBack(); // 👈 salir limpio
-        return;
-      }
-
-      const remainingTotal = unpaidSales.reduce(
-        (acc, s) => acc + s.amount,
-        0
-      );
-
-      const amountPerPerson = remainingTotal / (splitCount - splitPaidCount);
-
-      await API.post(`/tables/${activeTable.id}/checkout`, {
-        method: paymentMethod,
-        amount: Number(amountPerPerson.toFixed(2)),
+      await API.post(`/tables/${activeTable.id}/items`, {
+        productId: product.id,
       });
 
-      setSplitPaidCount((prev) => prev + 1);
-
       await fetchTables(true);
-
-    } catch (err) {
-      alert(err?.response?.data?.message || "Error en pago");
+    } catch {
+      showToast("Error agregando producto", "error");
     }
   };
 
+  // ========================
+  // CHECKOUT
+  // ========================
+  const handleCheckout = async (method, amountOverride) => {
+    try {
+      const paidTotal = (activeTable.payments || []).reduce(
+        (acc, p) => acc + p.amount,
+        0
+      );
+
+      const remaining = activeTable.total - paidTotal;
+
+      const amount = amountOverride ?? remaining;
+
+      if (amount <= 0) {
+        showToast("Nada pendiente por cobrar", "error");
+        return;
+      }
+
+      await API.post(`/tables/${activeTable.id}/checkout`, {
+        method,
+        amount,
+      });
+
+      showToast("Pago completado");
+      await handleBack();
+    } catch (err) {
+      showToast(err?.response?.data?.message || "Error en pago", "error");
+    }
+  };
+
+  // ========================
+  // UI
+  // ========================
   return (
-    <POSLayout
-      tables={tables}
-      activeTable={activeTable}
-      onCreateTable={handleCreateTable}
-      onOpenTable={handleOpenTable}
-      onBack={handleBack}
-    >
-      {activeTable && (
-        <>
-          <CategoryBar
-            categories={categories}
-            selected={selectedCategory}
-            onSelect={setSelectedCategory}
+    <>
+      <POSLayout
+        tables={tables}
+        activeTable={activeTable}
+        onCreateTable={handleCreateTable}
+        onOpenTable={handleOpenTable}
+        onBack={handleBack}
+      >
+        {!activeTable && (
+          <CreateTableCard
+            value={newTableNumber}
+            onChange={setNewTableNumber}
+            onCreate={handleCreateTable}
           />
+        )}
 
-          <ProductPanel
-            products={filteredProducts}
-            onAdd={handleAddProduct}
-          />
+        {activeTable && (
+          <>
+            <CategoryBar
+              categories={categories}
+              selected={selectedCategory}
+              onSelect={setSelectedCategory}
+            />
 
-          <TableView
+            <ProductPanel
+              products={filteredProducts}
+              onAdd={handleAddProduct}
+            />
+
+            <TableView
+              table={activeTable}
+              onCheckout={() => setCheckoutStep("confirm")}
+            />
+          </>
+        )}
+
+        {checkoutStep === "confirm" && (
+          <CheckoutOverlay
             table={activeTable}
+            onClose={() => setCheckoutStep(null)}
+            onSingle={handleCheckout}
             paymentMethod={paymentMethod}
             setPaymentMethod={setPaymentMethod}
-            onCheckout={() => setCheckoutMode("confirm")}
+            onSplit={() => {
+              showToast("Split deshabilitado por ahora", "error");
+            }}
           />
-        </>
-      )}
+        )}
+      </POSLayout>
 
-      {checkoutMode === "confirm" && (
-        <CheckoutOverlay
-          onClose={() => setCheckoutMode(null)}
-          onSingle={handleCheckoutSingle}
-          onSplit={handleSplitAmount}
-        />
-      )}
-
-      {checkoutMode === "split-amount" && (
-        <div style={styles.overlay}>
-          <div style={{ ...styles.modalBox, ...styles.card }}>
-            <h3>
-              Pago {splitPaidCount + 1} de {splitCount}
-            </h3>
-
-            <button style={styles.button} onClick={handlePaySplitPart}>
-              💰 Cobrar parte
-            </button>
-
-            <button
-              style={styles.button}
-              onClick={() => setCheckoutMode(null)}
-            >
-              Cancelar
-            </button>
-          </div>
-        </div>
-      )}
-    </POSLayout>
+      <Toast toast={toast} />
+    </>
   );
 }
 

@@ -1,10 +1,11 @@
 import { useMemo } from "react";
-import useSales from "../../../hooks/useSales";
-
+import useSales from "@/hooks/useSales";
 import SalesHistoryCard from "../components/SalesHistoryCard";
-import styles from "../../../styles/styles";
-import { METHOD_LABELS } from "../../../constants/paymentMethods";
-import { formatCRC, formatDate, formatTime } from "../../../utils/formatters";
+
+import styles from "@/styles/styles";
+import { METHOD_LABELS } from "@/constants/paymentMethods";
+
+import { formatCRC, formatDate, formatTime } from "@/utils/formatters";
 
 function HistoryPage() {
   const { sales } = useSales();

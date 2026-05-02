@@ -1,7 +1,7 @@
 import { Routes, Route } from "react-router-dom";
 
-import SalesPage from "../pages/sales/SalesPage";
-import AdminPage from "../pages/admin/AdminPage";
+import SalesPage from "@/pages/sales/SalesPage";
+import AdminPage from "@/pages/admin/AdminPage";
 
 function AppRouter() {
   return (

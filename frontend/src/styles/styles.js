@@ -7,7 +7,7 @@ const styles = {
     maxWidth: "1100px",
     margin: "auto",
     padding: "25px",
-    fontFamily: "Arial"
+    fontFamily: "Arial",
   },
 
   title: {
@@ -291,19 +291,26 @@ const styles = {
   },
 
   overlay: {
-  position: "fixed",
-  top: 0,
-  left: 0,
-  width: "100%",
-  height: "100%",
-  background: "rgba(0,0,0,0.6)",
-},
+    position: "fixed",
+    inset: 0,
+    background: "rgba(0,0,0,0.6)",
+    display: "flex",
+    justifyContent: "center",
+    alignItems: "center",
+    zIndex: 9999,
+  },
 
-modalBox: {
-  padding: 20,
-  margin: "10% auto",
-  width: 300,
-},
+  modalBox: {
+    background: "#ffffff",
+    padding: "25px",
+    borderRadius: "12px",
+    width: "380px",
+    maxWidth: "90vw",
+    display: "flex",
+    flexDirection: "column",
+    gap: "10px",
+    boxShadow: "0 8px 20px rgba(0,0,0,0.2)",
+  },
 };
 
 export default styles;

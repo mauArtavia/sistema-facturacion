@@ -1,5 +1,4 @@
 const prisma = require("../config/prisma");
-const { v4: uuidv4 } = require("uuid");
 
 /**
  * CREATE TABLE
@@ -12,7 +11,7 @@ const createTable = async (req, res) => {
       return res.status(400).json({ message: "Table number is required" });
     }
 
-    // 🔥 VALIDACIÓN: evitar mesas duplicadas abiertas
+    // 🔥 evitar duplicados abiertos
     const existing = await prisma.table.findFirst({
       where: {
         number: String(number),
@@ -26,7 +25,6 @@ const createTable = async (req, res) => {
       });
     }
 
-    // 🔥 CREAR MESA
     const table = await prisma.table.create({
       data: {
         number: String(number),
@@ -54,11 +52,13 @@ const getTables = async (req, res) => {
       include: {
         sales: {
           include: { product: true }
-        }
+        },
+        payments: true // 🔥 IMPORTANTE
       }
     });
 
     return res.json(tables);
+
   } catch (error) {
     console.error("Error fetching tables:", error);
     return res.status(500).json({ message: "Error fetching tables" });
@@ -98,8 +98,7 @@ const addItemToTable = async (req, res) => {
         amount: product.price,
         method: "table",
         productId: product.id,
-        tableId: table.id,
-        transactionId: null
+        tableId: table.id
       }
     });
 
@@ -111,13 +110,16 @@ const addItemToTable = async (req, res) => {
     });
 
     return res.json({ sale, table: updatedTable });
+
   } catch (error) {
     console.error("Error adding item to table:", error);
     return res.status(500).json({ message: "Error adding item" });
   }
 };
 
-
+/**
+ * CHECKOUT TABLE (🔥 NUEVO SISTEMA REAL)
+ */
 const checkoutTable = async (req, res) => {
   try {
     const tableId = Number(req.params.id);
@@ -131,7 +133,7 @@ const checkoutTable = async (req, res) => {
 
     const table = await prisma.table.findUnique({
       where: { id: tableId },
-      include: { sales: true }
+      include: { payments: true }
     });
 
     if (!table) {
@@ -144,32 +146,34 @@ const checkoutTable = async (req, res) => {
       });
     }
 
-    const pendingSales = table.sales.filter(
-      (s) => s.transactionId === null
+    // 🔥 total pagado
+    const paidTotal = table.payments.reduce(
+      (acc, p) => acc + p.amount,
+      0
     );
 
-    if (pendingSales.length === 0) {
+    const remaining = table.total - paidTotal;
+
+    if (remaining <= 0) {
       return res.status(400).json({
         message: "Nothing to pay"
       });
     }
 
-    const txId = uuidv4();
-
-    let targetSales = [];
+    let parsedAmount;
 
     // =========================
     // 🔥 CASO 1: PAGO COMPLETO
     // =========================
-    if (!amount) {
-      targetSales = pendingSales;
+    if (amount === undefined) {
+      parsedAmount = remaining;
     }
 
     // =========================
-    // 🔥 CASO 2: PAGO PARCIAL (50/50)
+    // 🔥 CASO 2: PAGO PARCIAL
     // =========================
     else {
-      const parsedAmount = Number(amount);
+      parsedAmount = Number(amount);
 
       if (isNaN(parsedAmount) || parsedAmount <= 0) {
         return res.status(400).json({
@@ -177,47 +181,29 @@ const checkoutTable = async (req, res) => {
         });
       }
 
-      let accumulated = 0;
-
-      for (const sale of pendingSales) {
-        if (accumulated >= parsedAmount) break;
-
-        targetSales.push(sale);
-        accumulated += sale.amount;
-        console.log("PENDING:", pendingSales.length);
-        console.log("AMOUNT REQUESTED:", amount);
-      }
-
-      if (targetSales.length === 0) {
+      if (parsedAmount > remaining) {
         return res.status(400).json({
-          message: "Not enough items to cover amount"
+          message: "Amount exceeds remaining",
+          remaining
         });
       }
     }
 
-    // 🔥 APLICAR PAGO SOLO A LOS SELECCIONADOS
-    await prisma.sale.updateMany({
-      where: {
-        id: { in: targetSales.map((s) => s.id) },
-        transactionId: null
-      },
+    // 🔥 registrar pago
+    await prisma.payment.create({
       data: {
+        amount: parsedAmount,
         method,
-        transactionId: txId
+        tableId
       }
     });
 
-    // 🔥 VER SI QUEDAN ITEMS
-    const stillPending = await prisma.sale.count({
-      where: {
-        tableId,
-        transactionId: null
-      }
-    });
+    const newRemaining = remaining - parsedAmount;
 
     let updatedTable = table;
 
-    if (stillPending === 0) {
+    // 🔥 cerrar mesa SOLO cuando se paga todo
+    if (newRemaining <= 0.01) {
       updatedTable = await prisma.table.update({
         where: { id: tableId },
         data: { status: "closed" }
@@ -225,11 +211,10 @@ const checkoutTable = async (req, res) => {
     }
 
     return res.json({
-      message: stillPending === 0
+      message: newRemaining <= 0.01
         ? "Table closed"
         : "Partial payment applied",
-      transactionId: txId,
-      remainingItems: stillPending,
+      remaining: newRemaining,
       table: updatedTable
     });
 

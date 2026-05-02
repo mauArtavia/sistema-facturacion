@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { groupSales } from "../../../utils/groupSales";
-import { payment } from "../../../constants/colors";
+import { groupSales } from "@/utils/groupSales";
+import { payment } from "@/constants/colors";
 
 function SalesHistoryCard({
   filteredSales,

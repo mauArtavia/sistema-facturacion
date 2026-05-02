@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
-import API from "../../services/api";
-import styles from "../../styles/styles";
+import API from "@/services/api";
+import styles from "@/styles/styles";
 
 function AdminPage() {
   const [categories, setCategories] = useState([]);

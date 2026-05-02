@@ -1,7 +1,11 @@
-import styles from "../../../../styles/styles";
+import styles from "@/styles/styles";
 
-function TableView({ table, paymentMethod, setPaymentMethod, onCheckout }) {
+function TableView({ table, onCheckout }) {
   const sales = table?.sales || [];
+  const payments = table?.payments || [];
+
+  const paidTotal = payments.reduce((acc, p) => acc + p.amount, 0);
+  const remaining = table.total - paidTotal;
 
   return (
     <div style={styles.card}>
@@ -13,21 +17,15 @@ function TableView({ table, paymentMethod, setPaymentMethod, onCheckout }) {
         </div>
       ))}
 
-      <b>Total: ₡{table.total}</b>
+      <div style={{ marginTop: 10 }}>
+        <div><b>Total:</b> ₡{table.total}</div>
+        <div><b>Pagado:</b> ₡{paidTotal}</div>
+        <div><b>Restante:</b> ₡{remaining.toFixed(2)}</div>
+      </div>
 
       <button style={styles.button} onClick={onCheckout}>
         💰 Cobrar
       </button>
-
-      <select
-        style={styles.select}
-        value={paymentMethod}
-        onChange={(e) => setPaymentMethod(e.target.value)}
-      >
-        <option value="cash">Efectivo</option>
-        <option value="card">Tarjeta</option>
-        <option value="sinpe">SINPE</option>
-      </select>
     </div>
   );
 }

@@ -1,7 +1,6 @@
 import { useState } from "react";
-import styles from "../../styles/styles";
+import styles from "@/styles/styles";
 
-// nuevas páginas
 import POSPage from "./pos/POSPage";
 import HistoryPage from "./history/HistoryPage";
 import ReportsPage from "./reports/ReportsPage";

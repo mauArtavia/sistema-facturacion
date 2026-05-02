@@ -1,11 +1,11 @@
 import { useState } from "react";
-import useReport from "../../../hooks/useReport";
-
+import useReport from "@/hooks/useReport";
 import DateRangeCard from "../components/DateRangeCard";
-import PieChartCard from "../../../components/charts/PieChartCard";
-import styles from "../../../styles/styles";
-import { getPresetRange } from "../../../utils/datePresets";
-import { formatCRC } from "../../../utils/formatters";
+import PieChartCard from "@/components/charts/PieChartCard";
+
+import styles from "@/styles/styles";
+import { getPresetRange } from "@/utils/datePresets";
+import { formatCRC } from "@/utils/formatters";
 
 function ReportsPage() {
   const [startDate, setStartDate] = useState(

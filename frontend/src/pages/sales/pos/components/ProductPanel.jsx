@@ -1,4 +1,4 @@
-import styles from "../../../../styles/styles";
+import styles from "@/styles/styles";
 
 function ProductPanel({ products = [], onAdd }) {
   return (

@@ -1,4 +1,4 @@
-import API from "../services/api";
+import API from "@/services/api";
 
 export const getSales = () => API.getSales();
 

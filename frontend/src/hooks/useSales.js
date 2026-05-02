@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import API from "../services/api";
+import API from "@/services/api";
 
 export default function useSales() {
   const [sales, setSales] = useState([]);
