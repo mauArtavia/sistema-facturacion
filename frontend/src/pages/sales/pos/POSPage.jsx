@@ -1,16 +1,14 @@
 import { useEffect, useState, useMemo } from "react";
 import API from "../../../services/api";
 import useProducts from "../../../hooks/useProducts";
-import { v4 as uuidv4 } from "uuid";
+
+import styles from "../../../styles/styles";
 
 import POSLayout from "./components/POSLayout";
 import CategoryBar from "./components/CategoryBar";
 import ProductPanel from "./components/ProductPanel";
 import TableView from "./components/TableView";
-
 import CheckoutOverlay from "./components/CheckoutOverlay";
-import SplitAutoOverlay from "./components/SplitAutoOverlay";
-import ManualSplitOverlay from "./components/ManualSplitOverlay";
 
 function POSPage() {
   const { products } = useProducts();
@@ -19,14 +17,10 @@ function POSPage() {
   const [activeTable, setActiveTable] = useState(null);
   const [paymentMethod, setPaymentMethod] = useState("cash");
   const [selectedCategory, setSelectedCategory] = useState(null);
-
   const [checkoutMode, setCheckoutMode] = useState(null);
-  const [bills, setBills] = useState([]);
-  const [currentBillIndex, setCurrentBillIndex] = useState(0);
+  const [splitCount, setSplitCount] = useState(0);
+  const [splitPaidCount, setSplitPaidCount] = useState(0);
 
-  // ========================
-  // DATA
-  // ========================
   const fetchTables = async (keepActive = false) => {
     const res = await API.get("/tables");
     setTables(res.data);
@@ -53,9 +47,6 @@ function POSPage() {
     ? products.filter((p) => p.categoryId === selectedCategory)
     : [];
 
-  // ========================
-  // ACTIONS
-  // ========================
   const handleCreateTable = async () => {
     const number = prompt("Número de mesa:");
     if (!number) return;
@@ -73,8 +64,6 @@ function POSPage() {
     setActiveTable(null);
     setSelectedCategory(null);
     setCheckoutMode(null);
-    setBills([]);
-    setCurrentBillIndex(0);
     await fetchTables();
   };
 
@@ -88,9 +77,6 @@ function POSPage() {
     await fetchTables(true);
   };
 
-  // ========================
-  // CHECKOUT SIMPLE
-  // ========================
   const handleCheckoutSingle = async () => {
     await API.post(`/tables/${activeTable.id}/checkout`, {
       method: paymentMethod,
@@ -99,96 +85,49 @@ function POSPage() {
     await handleBack();
   };
 
-  // ========================
-  // SPLIT AUTOMÁTICO (FIXED)
-  // ========================
-  const handleSplitAutomatic = () => {
-    const count = Number(prompt("Cantidad de cuentas"));
-    if (!count || count <= 0) return;
+  const handleSplitAmount = () => {
+    const count = Number(prompt("Cantidad de personas"));
 
-    const unpaidSales = activeTable?.sales?.filter(
-      (s) => !s.transactionId
-    ) || [];
+    if (!count || count <= 1) return;
 
-    if (unpaidSales.length === 0) {
-      alert("No hay productos para dividir");
-      return;
-    }
-
-    const chunkSize = Math.ceil(unpaidSales.length / count);
-
-    const newBills = Array.from({ length: count }).map((_, i) => {
-      const start = i * chunkSize;
-      const slice = unpaidSales.slice(start, start + chunkSize);
-
-      const total = slice.reduce(
-        (acc, s) => acc + (s.amount || 0),
-        0
-      );
-
-      return {
-        id: uuidv4(),
-        name: `Cuenta ${i + 1}`,
-        total,
-        paid: false,
-        salesIds: slice.map((s) => s.id),
-      };
-    });
-
-    setBills(newBills);
-    setCheckoutMode("split-auto");
+    setSplitCount(count);
+    setSplitPaidCount(0); // 👈 importante
+    setCheckoutMode("split-amount");
   };
 
-  // ========================
-  // PAGAR CUENTA (FIXED LOGIC)
-  // ========================
-  const handlePayBill = async (index) => {
+  const handlePaySplitPart = async () => {
     try {
-      const bill = bills[index];
+      const unpaidSales = activeTable.sales.filter(
+        (s) => !s.transactionId
+      );
 
-      if (!bill || bill.paid) return;
-
-      if (!bill.salesIds || bill.salesIds.length === 0) {
-        alert("Esta cuenta no tiene items asignados");
+      if (unpaidSales.length === 0) {
+        alert("Nada pendiente");
+        await handleBack(); // 👈 salir limpio
         return;
       }
 
-      await API.post(`/tables/${activeTable.id}/checkout`, {
-        method: paymentMethod,
-        salesIds: bill.salesIds,
-      });
-
-      setBills((prev) =>
-        prev.map((b, i) => (i === index ? { ...b, paid: true } : b))
+      const remainingTotal = unpaidSales.reduce(
+        (acc, s) => acc + s.amount,
+        0
       );
 
+      const amountPerPerson = remainingTotal / (splitCount - splitPaidCount);
+
+      await API.post(`/tables/${activeTable.id}/checkout`, {
+        method: paymentMethod,
+        amount: Number(amountPerPerson.toFixed(2)),
+      });
+
+      setSplitPaidCount((prev) => prev + 1);
+
       await fetchTables(true);
+
     } catch (err) {
-      console.error(err);
-
-      alert(err?.response?.data?.message || "Error al cobrar cuenta");
+      alert(err?.response?.data?.message || "Error en pago");
     }
-
-    console.log("PAY BILL:", bills);
   };
 
-  // ========================
-  // FINALIZAR SPLIT
-  // ========================
-  const handleFinishSplit = async () => {
-    const unpaid = bills.some((b) => !b.paid);
-
-    if (unpaid) {
-      alert("Faltan cuentas por pagar");
-      return;
-    }
-
-    await handleBack();
-  };
-
-  // ========================
-  // UI
-  // ========================
   return (
     <POSLayout
       tables={tables}
@@ -214,39 +153,38 @@ function POSPage() {
             table={activeTable}
             paymentMethod={paymentMethod}
             setPaymentMethod={setPaymentMethod}
-            onCheckout={() => setCheckoutMode("select")}
+            onCheckout={() => setCheckoutMode("confirm")}
           />
         </>
       )}
 
-      {checkoutMode === "select" && (
+      {checkoutMode === "confirm" && (
         <CheckoutOverlay
           onClose={() => setCheckoutMode(null)}
           onSingle={handleCheckoutSingle}
-          onAuto={handleSplitAutomatic}
-          onManual={() => setCheckoutMode("manual")}
+          onSplit={handleSplitAmount}
         />
       )}
 
-      {checkoutMode === "split-auto" && (
-        <SplitAutoOverlay
-          bills={bills}
-          onPay={handlePayBill}
-          onFinish={handleFinishSplit}
-          onClose={() => setCheckoutMode(null)}
-        />
-      )}
+      {checkoutMode === "split-amount" && (
+        <div style={styles.overlay}>
+          <div style={{ ...styles.modalBox, ...styles.card }}>
+            <h3>
+              Pago {splitPaidCount + 1} de {splitCount}
+            </h3>
 
-      {checkoutMode === "manual" && (
-        <ManualSplitOverlay
-          bills={bills}
-          setBills={setBills}
-          currentBillIndex={currentBillIndex}
-          setCurrentBillIndex={setCurrentBillIndex}
-          sales={activeTable?.sales}
-          onFinish={handleFinishSplit}
-          onClose={() => setCheckoutMode(null)}
-        />
+            <button style={styles.button} onClick={handlePaySplitPart}>
+              💰 Cobrar parte
+            </button>
+
+            <button
+              style={styles.button}
+              onClick={() => setCheckoutMode(null)}
+            >
+              Cancelar
+            </button>
+          </div>
+        </div>
       )}
     </POSLayout>
   );

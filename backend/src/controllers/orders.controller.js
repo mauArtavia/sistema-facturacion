@@ -12,6 +12,21 @@ const createTable = async (req, res) => {
       return res.status(400).json({ message: "Table number is required" });
     }
 
+    // 🔥 VALIDACIÓN: evitar mesas duplicadas abiertas
+    const existing = await prisma.table.findFirst({
+      where: {
+        number: String(number),
+        status: "open"
+      }
+    });
+
+    if (existing) {
+      return res.status(400).json({
+        message: "Ya existe una mesa abierta con ese número"
+      });
+    }
+
+    // 🔥 CREAR MESA
     const table = await prisma.table.create({
       data: {
         number: String(number),
@@ -21,6 +36,7 @@ const createTable = async (req, res) => {
     });
 
     return res.status(201).json(table);
+
   } catch (error) {
     console.error("Error creating table:", error);
     return res.status(500).json({ message: "Error creating table" });
@@ -101,13 +117,17 @@ const addItemToTable = async (req, res) => {
   }
 };
 
-/**
- * CHECKOUT TABLE (FIX REAL ESTADO CONSISTENTE)
- */
+
 const checkoutTable = async (req, res) => {
   try {
     const tableId = Number(req.params.id);
-    const { method, salesIds, amount } = req.body;
+    const { method, amount } = req.body;
+
+    if (!method) {
+      return res.status(400).json({
+        message: "Payment method is required"
+      });
+    }
 
     const table = await prisma.table.findUnique({
       where: { id: tableId },
@@ -124,7 +144,6 @@ const checkoutTable = async (req, res) => {
       });
     }
 
-    // 🔥 SOLO VENTAS PENDIENTES
     const pendingSales = table.sales.filter(
       (s) => s.transactionId === null
     );
@@ -140,48 +159,43 @@ const checkoutTable = async (req, res) => {
     let targetSales = [];
 
     // =========================
-    // SPLIT POR ITEMS
+    // 🔥 CASO 1: PAGO COMPLETO
     // =========================
-    if (salesIds && salesIds.length > 0) {
-      targetSales = pendingSales.filter((s) =>
-        salesIds.includes(s.id)
-      );
+    if (!amount) {
+      targetSales = pendingSales;
+    }
+
+    // =========================
+    // 🔥 CASO 2: PAGO PARCIAL (50/50)
+    // =========================
+    else {
+      const parsedAmount = Number(amount);
+
+      if (isNaN(parsedAmount) || parsedAmount <= 0) {
+        return res.status(400).json({
+          message: "Invalid amount"
+        });
+      }
+
+      let accumulated = 0;
+
+      for (const sale of pendingSales) {
+        if (accumulated >= parsedAmount) break;
+
+        targetSales.push(sale);
+        accumulated += sale.amount;
+        console.log("PENDING:", pendingSales.length);
+        console.log("AMOUNT REQUESTED:", amount);
+      }
 
       if (targetSales.length === 0) {
         return res.status(400).json({
-          message: "Selected items already paid or invalid"
+          message: "Not enough items to cover amount"
         });
       }
     }
 
-    // =========================
-    // SPLIT POR MONTO / CUENTA COMPLETA
-    // =========================
-    else if (amount) {
-      const remainingTotal = pendingSales.reduce(
-        (acc, s) => acc + s.amount,
-        0
-      );
-
-      const parsedAmount = Number(amount);
-
-      if (parsedAmount <= 0 || parsedAmount > remainingTotal) {
-        return res.status(400).json({
-          message: "Invalid amount",
-          remaining: remainingTotal
-        });
-      }
-
-      targetSales = pendingSales; // el pago es global
-    }
-
-    else {
-      return res.status(400).json({
-        message: "Missing payment data"
-      });
-    }
-
-    // 🔥 ACTUALIZAR SOLO VENTAS PENDIENTES
+    // 🔥 APLICAR PAGO SOLO A LOS SELECCIONADOS
     await prisma.sale.updateMany({
       where: {
         id: { in: targetSales.map((s) => s.id) },
@@ -193,7 +207,7 @@ const checkoutTable = async (req, res) => {
       }
     });
 
-    // 🔥 recalcular pendientes
+    // 🔥 VER SI QUEDAN ITEMS
     const stillPending = await prisma.sale.count({
       where: {
         tableId,
@@ -213,7 +227,7 @@ const checkoutTable = async (req, res) => {
     return res.json({
       message: stillPending === 0
         ? "Table closed"
-        : "Payment applied",
+        : "Partial payment applied",
       transactionId: txId,
       remainingItems: stillPending,
       table: updatedTable

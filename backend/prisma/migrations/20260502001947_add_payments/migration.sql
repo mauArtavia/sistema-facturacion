@@ -1,0 +1,9 @@
+-- CreateTable
+CREATE TABLE "Payment" (
+    "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+    "amount" REAL NOT NULL,
+    "method" TEXT NOT NULL,
+    "tableId" INTEGER NOT NULL,
+    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT "Payment_tableId_fkey" FOREIGN KEY ("tableId") REFERENCES "Table" ("id") ON DELETE RESTRICT ON UPDATE CASCADE
+);
